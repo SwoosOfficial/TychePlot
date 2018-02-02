@@ -38,11 +38,11 @@ class ReflectoPlot(Plot):
     convFac=(h*c)/e #eV*nm
     
     @classmethod
-    def wavelengthToEV(cls,wavelength,spectralRadiance):
+    def wavelengthToEV(cls,wavelength,intens):
         energy=wavelength**-1*cls.convFac #eV
         corFac=wavelength**2*cls.e/(cls.h*cls.c) #nm/eV
-        spectralRadianceEnergy=spectralRadiance*corFac #W/(sr*m^2*eV)
-        return (energy,spectralRadianceEnergy)
+        intensEnergy=intens*corFac #W/(sr*m^2*eV)
+        return (energy,intensEnergy)
     
     @classmethod
     def noNegatives(cls,a):
@@ -73,10 +73,10 @@ class ReflectoPlot(Plot):
                  showTrans=True,
                  showRefl=True,
                  showAbs=False,
-                 showColAxType=["lin","lin","lin","lin","lin","lin","lin","lin"],
-                 showColAxLim=[None,None,None,None,None,None,None,None],
+                 showColAxType=["lin","lin","lin","lin","lin","lin","lin","lin","lin"],
+                 showColAxLim=[None,None,None,None,None,None,None,None,None],
                  showColLabel= ["","Wavelength","Reflexion", "Transmission", "Absorption", "Energy","Transmission", "Reflexion","Absorption"],
-                 showColLabelUnit=["","Wavelength (nm)","Transmission","Reflexion","Absorption","Energy (eV)","Transmission", "Reflexion","Absorption"],
+                 showColLabelUnit=["","Wavelength (nm)","Transmission","Reflexion","Absorption","Energy (eV)","Normalized Transmission", "Normalized Reflexion","Normalized Absorption"],
                  averageMedian=False,
                  errors=False,
                  formatAbs="-",
@@ -125,6 +125,9 @@ class ReflectoPlot(Plot):
             energy,e_refl=self.wavelengthToEV(x, refl)
             e_trans=self.wavelengthToEV(x, refl)[1]
             e_absorp=[1]*len(e_trans)-e_trans-e_refl
+            e_refl=self.normalize(e_refl)
+            e_trans=self.normalize(e_trans)
+            e_absorp=self.normalize(e_absorp)
             data=Data.mergeData([x,refl,trans,absorp,energy,e_refl,e_trans,e_absorp])
             dataList.append([Data(data)])
         return dataList
@@ -163,9 +166,13 @@ class ReflectoPlot(Plot):
     
     def xColTicksToXCol2Ticks(self, ticks):
         if self.xCol==1 and self.xCol2==5:
-            return ["{:2.1f}".format(tick) for tick in ticks**-1*self.convFac]
+            ticks=ticks**-1*self.convFac
+            ticks=np.around(ticks,decimals=1)
+            return ["{:2.1f}".format(tick) for tick in ticks]
         elif self.xCol==5 and self.xCol2==1:
-            return ["{:3.0f}".format(tick) for tick in ticks**-1*self.convFac]
+            ticks=ticks**-1*self.convFac
+            ticks=np.around(ticks,decimals=0)
+            return ["{:3.0f}".format(tick) for tick in ticks]
         else:
             return ticks
         
