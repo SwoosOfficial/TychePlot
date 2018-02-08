@@ -172,10 +172,10 @@ class SpectraPlot(Plot):
                     if type(self.fitterList[n]) is list:
                         for fitter in self.fitterList[n]:
                             if fitter.desc != None:
-                                ax.annotate(s=fitter.desc.format(fitter.params[self.xParamPos]), size=self.customFontsize[2], xy=(fitter.params[self.xParamPos],np.amax(fitter.CurveData.getSplitData2D()[1])-0.1), xytext=fitter.textPos, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n], edgecolor=self.fitColors[n]))
+                                ax.annotate(s=fitter.desc.format(fitter.params[self.xParamPos]), size=self.customFontsize[2], xy=(fitter.params[self.xParamPos],np.amax(fitter.CurveData.getSplitData2D()[1])-0.1), xytext=fitter.textPos, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n], edgecolor=self.fitColors[n], linewidth=mpl.rcParams["lines.linewidth"]))
                     elif self.fitterList[n].desc != None:
                         fitter=self.fitterList[n]
-                        ax.annotate(s=fitter.desc.format(fitter.params[self.xParamPos]), size=self.customFontsize[2], xy=(fitter.params[self.xParamPos],np.amax(fitter.CurveData.getSplitData2D()[1])-0.1), xytext=fitter.textPos, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n], edgecolor=self.fitColors[n]))
+                        ax.annotate(s=fitter.desc.format(fitter.params[self.xParamPos]), size=self.customFontsize[2], xy=(fitter.params[self.xParamPos],np.amax(fitter.CurveData.getSplitData2D()[1])-0.1), xytext=fitter.textPos, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n], edgecolor=self.fitColors[n], linewidth=mpl.rcParams["lines.linewidth"]))
         except Exception:
             pass
                 
