@@ -35,6 +35,7 @@ class OLEDPlot(Plot):
     h=6.63*10**-34 #J*s
     k_B=1.38064852*10**-23# J/K
     eps_0=8.85418781762*10**-12 #As/(Vm)
+    fileFormat={"separator":"\t", "skiplines":1}
     #ProgKonst
     chars=list(string.ascii_uppercase) #alphabetUppercase
     
@@ -79,6 +80,9 @@ class OLEDPlot(Plot):
     def calcCurEffic(cls, dens, cand):
         return cand/dens
     
+
+        
+    
     def __init__(self,
                  name,
                  fileList,
@@ -112,6 +116,8 @@ class OLEDPlot(Plot):
                  titleForm="\\textbf{{{} characteristic curve of}}\n\\textbf{{the {} OLED}}",
                  legLoc=2,
                  samples=None,
+                 idealDevice=-1,
+                 maxEqe=5,
                  **kwargs
                 ):
         Plot.__init__(self, name, fileList, averageMedian=averageMedian, showColAxType=showColAxType, showColAxLim=showColAxLim, showColLabel=showColLabel, showColLabelUnit=showColLabelUnit, fileFormat=fileFormat, legLoc=legLoc, **kwargs)
@@ -141,11 +147,14 @@ class OLEDPlot(Plot):
         else:
             self.samples=len(self.fileList)
         #initmethods
+        self.idealDevice=idealDevice
+        self.maxEqe=maxEqe
         self.exportDataList=copy.deepcopy(self.dataList)
         self.spectralDataList=self.spectraDataImport()[0]
         self.diodeData=self.spectraDataImport()[1]
 
     
+                      
     def spectraDataImport(self):
         bg=self.specBg
         yCol=self.specYCol
@@ -178,12 +187,20 @@ class OLEDPlot(Plot):
         Plot.equalizeRanges(diodeFuncData)
         return spectralDataList, diodeFuncData
     
+
+    
+    def radToCandela(self, rad, spectralData):
+        summe=np.sum([self.diodeData.getSplitData2D()[1][a]*spectralData.getSplitData2D()[1][a] for a in range(0,len(self.diodeData.getSplitData2D()[1]))])
+        return rad*OLEDPlot.K_m*summe
     
     def curToDensity(self,cur):
         return cur*10**5/self.pixelsize_mm2; #converts A to mA/cm² A/m²--> 
     
     def photToCandela(self,phot):
         return phot*4.3*self.pixelsize_mm2**(-1)*10**10 #converts A to cd/m² Correction: pixelsize_mm2
+    
+    def candToPhotoCurr(self, cand):
+        return cand/(4.3*self.pixelsize_mm2**(-1)*10**10)
     
     def candToRadiance(self,cand, spectralData): #converts cd/m² to W/(sr*m²)
         summe=np.sum([self.diodeData.getSplitData2D()[1][a]*spectralData.getSplitData2D()[1][a] for a in range(0,len(self.diodeData.getSplitData2D()[1]))])
@@ -192,6 +209,15 @@ class OLEDPlot(Plot):
     def calcEQE(self, dens, rad, spectralData):
         sum2=np.sum([spectralData.getSplitData2D()[1][a]/spectralData.getSplitData2D()[0][a] for a in range(0,len(spectralData.getSplitData2D()[1]))])
         return (np.pi*rad*OLEDPlot.e)/(dens*10*OLEDPlot.h*OLEDPlot.c*sum2)*100 #dens*10**4--> mA/m² --> dens*10 --> A/m²
+    
+    def theoLimitPhot(self, volt ,dens, spectralData):
+        sum2=np.sum([spectralData.getSplitData2D()[1][a]/spectralData.getSplitData2D()[0][a] for a in range(0,len(spectralData.getSplitData2D()[1]))])
+        for n in range(0,len(volt)):
+            if volt[n]>=0:
+                break
+        dens[0:n]=0
+        rad=(self.maxEqe*dens*10*OLEDPlot.h*OLEDPlot.c*sum2)/(np.pi*OLEDPlot.e*100)
+        return self.candToPhotoCurr(self.radToCandela(rad, spectralData))
     
     def processFileName(self, option=".pdf"):
         if self.filename is None:
@@ -236,27 +262,28 @@ class OLEDPlot(Plot):
                     subDataList.append(dens) #Current_density [3]
                     lum=Data.processDataAndReturnArray(data, self.photToCandela, yCol=3)[:,2]
                     subDataList.append(lum) #Luminance [4]
-                    subDataList.append(self.candToRadiance(lum,spectralData)) #Radiance [5]
+                    rad=self.candToRadiance(lum,spectralData)
+                    subDataList.append(rad) #Radiance [5]
                     curEffic=OLEDPlot.calcCurEffic(dens,lum)
                     subDataList.append(curEffic) #Current_efficacy
                     lumEffic=OLEDPlot.calcLumEffic(subDataList[0],dens,lum)
                     subDataList.append(lumEffic) #Luminous_efficacy
-                    eqe=self.calcEQE(dens,subDataList[4],spectralData)
+                    eqe=self.calcEQE(dens,rad,spectralData)
                     subDataList.append(eqe) #EQE8
                     data.setData(Data.mergeData(subDataList))
                     if self.xLim is not None:
-                        nList.append(data.getFirstIndexWhereGreaterOrEq(1,self.xLim[0]))
-                        mList.append(data.getLastIndexWhereSmallerOrEq(1,self.xLim[1]))
-                    try:
-                        n=max(nList)
-                        m=min(mList)
-                        for data in deviceData:
-                            if m==-1:
-                                data.setData(data.getData()[n:])
-                            else:
-                                data.setData(data.getData()[n:m+1])
-                    except ValueError:
-                            pass
+                        nList.append(data.getFirstIndexWhereGreaterOrEq(self.xCol,self.xLim[0]))
+                        mList.append(data.getLastIndexWhereSmallerOrEq(self.xCol,self.xLim[1]))
+                try:
+                    n=max(nList)
+                    m=min(mList)
+                    for data in deviceData:
+                        if m==-1:
+                            data.setData(data.getData()[n:])
+                        else:
+                            data.setData(data.getData()[n:m+1])
+                except ValueError:
+                        pass
         self.dataProcessed=True
         return self.dataList
 
@@ -311,7 +338,48 @@ class OLEDPlot(Plot):
                 self.dataList=[[Data(fileToNpArray(pixel, **self.fileFormat)[0], xCol=self.xCol, yCol=self.showCol) for pixel in device] for device in self.fileList]
         return self.dataList
     
-
+    
+    def afterPlot(self):
+        if self.idealDevice>=0:
+            idealDevice=self.idealDevice
+            spectralData=self.spectralDataList[idealDevice]
+            expVolt=self.expectData[idealDevice].getData()[:,0]
+            expCurr=self.expectData[idealDevice].getData()[:,1]
+            expDens=self.expectData[idealDevice].getData()[:,2]
+            idLum=self.theoLimitPhot(expVolt, expDens,spectralData)
+            idPhot=idLum
+            data=Data(Data.mergeData((expVolt,expCurr,idPhot)))
+            #data.processData(OLEDPlot.remDarkCurr, yCol=3)
+            data.limitData(xLim=self.xLimOrig, xCol=self.xColOrig)
+            data.processData(OLEDPlot.absolute, yCol=2)
+            subDataList=[]
+            subDataList.append(data.getSplitData2D(yCol=2)[0])
+            subDataList.append(data.getSplitData2D(yCol=2)[1]) #Current [2]  
+            dens=Data.processDataAndReturnArray(data, self.curToDensity)[:,1]
+            subDataList.append(dens) #Current_density [3]
+            lum=Data.processDataAndReturnArray(data, self.photToCandela, yCol=3)[:,2]
+            subDataList.append(lum) #Luminance [4]
+            subDataList.append(self.candToRadiance(lum,spectralData)) #Radiance [5]
+            curEffic=OLEDPlot.calcCurEffic(dens,lum)
+            subDataList.append(curEffic) #Current_efficacy
+            lumEffic=OLEDPlot.calcLumEffic(subDataList[0],dens,lum)
+            subDataList.append(lumEffic) #Luminous_efficacy
+            eqe=self.calcEQE(dens,subDataList[4],spectralData)
+            subDataList.append(eqe) #EQE8
+            data.setData(Data.mergeData(subDataList))
+            self.idealData=data
+            try:
+                if self.showCol not in [0,1,2,3]:
+                    AX=self.ax.errorbar(*data.getSplitData2D(xCol=self.xCol, yCol=self.showCol), c="#000000", ls=self.ls, label="Ideal")
+                if self.showCol2 not in [0,1,2,3]:
+                    AX=self.ax2.errorbar(*data.getSplitData2D(xCol=self.xCol, yCol=self.showCol2), c="#000000", ls=self.ax2ls, label="Ideal "+self.showColLabel[self.showCol2].lower())
+            except:
+                raise
+                
+            
+                 
+             
+            
 
 # In[3]:
 

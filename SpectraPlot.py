@@ -61,7 +61,9 @@ class SpectraPlot(Plot):
     def twoGaussSplines(cls, x, mu, amp, sigma, sigma2):
         return amp*np.exp(-((x-mu)**2/(2*sigma**2)))*np.heaviside(x-mu,0)+amp*np.exp(-((x-mu)**2/(2*sigma2**2)))*np.heaviside(mu-x,0)
     
-
+    @classmethod
+    def FWHMbySigma(cls, sigma):
+        return sigma*2.3548
     
     def __init__(self,
                  name,
@@ -175,9 +177,13 @@ class SpectraPlot(Plot):
                                 ax.annotate(s=fitter.desc.format(fitter.params[self.xParamPos]), size=self.customFontsize[2], xy=(fitter.params[self.xParamPos],np.amax(fitter.CurveData.getSplitData2D()[1])-0.1), xytext=fitter.textPos, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n], edgecolor=self.fitColors[n], linewidth=mpl.rcParams["lines.linewidth"]))
                     elif self.fitterList[n].desc != None:
                         fitter=self.fitterList[n]
-                        ax.annotate(s=fitter.desc.format(fitter.params[self.xParamPos]), size=self.customFontsize[2], xy=(fitter.params[self.xParamPos],np.amax(fitter.CurveData.getSplitData2D()[1])-0.1), xytext=fitter.textPos, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n], edgecolor=self.fitColors[n], linewidth=mpl.rcParams["lines.linewidth"]))
+                        se=fitter.desc.format(fitter.params[self.xParamPos])
+                        sze=self.customFontsize[2]
+                        xsy=(fitter.params[self.xParamPos],np.amax(fitter.CurveData.getSplitData2D()[1])-0.1)
+                        arprps=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n], edgecolor=self.fitColors[n], linewidth=mpl.rcParams["lines.linewidth"])
+                        ax.annotate(s=se, size=sze, xy=xsy, xytext=fitter.textPos, arrowprops=arprps)
         except Exception:
-            pass
+            raise
                 
 
 

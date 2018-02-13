@@ -476,8 +476,8 @@ class Plot():
     
     
     def saveFig(self):
-        matplotlib.pyplot.savefig(self.processFileName(option=".pdf"))
-        matplotlib.pyplot.savefig(self.processFileName(option=".pgf"))
+        matplotlib.pyplot.savefig(self.processFileName(option=".pdf"), bbox_inches='tight')
+        matplotlib.pyplot.savefig(self.processFileName(option=".pgf"), bbox_inches='tight')
         
     def processFileName(self, option=".pdf"):
         if self.filename is None:
@@ -632,10 +632,11 @@ class Plot():
                 for b in AX[2]:
                     b.set_alpha(self.erroralpha)
             if self.show[n][1] and self.showCol2 is not 0:
+                labelZ=labels[n]+" "+self.showColLabel[self.showCol2].lower()
                 if self.errors[n][1]:
-                    AX2=ax2.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol2), yerr=[self.logErr[self.ax2errorTypeDown][n][:,showCol2-1],self.logErr[self.ax2errorTypeUp][n][:,showCol2-1]], capsize=self.capsize, capthick=self.capthick, c=colors[n+colorOffset], ls=self.ax2ls, label=labels[n]+" "+self.showColLabel[self.showCol2],  errorevery=self.showErrorOnlyEvery)
+                    AX2=ax2.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol2), yerr=[self.logErr[self.ax2errorTypeDown][n][:,showCol2-1],self.logErr[self.ax2errorTypeUp][n][:,showCol2-1]], capsize=self.capsize, capthick=self.capthick, c=colors[n+colorOffset], ls=self.ax2ls, label=labelZ,  errorevery=self.showErrorOnlyEvery)
                 else:
-                    AX2=ax2.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol2), c=colors[n+colorOffset], ls=self.ax2ls, label=labels[n]+" "+self.showColLabel[self.showCol2])
+                    AX2=ax2.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol2), c=colors[n+colorOffset], ls=self.ax2ls, label=labelZ)
                 if self.fitList is not None and self.fitterList[n] is not None:
                     if type(self.fitterList[n]) is list:
                         for fitter in self.fitterList[n]:

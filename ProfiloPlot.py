@@ -23,7 +23,7 @@ from Plot import Plot
 
 
 
-class DEKTAKPlot(Plot):
+class ProfiloPlot(Plot):
 
     @classmethod
     def linear(cls, x, a, b):
@@ -95,7 +95,7 @@ class DEKTAKPlot(Plot):
         return self.dataList
     
     def modFunc(self, ydata, xdata=None, params=None):
-        return ydata-DEKTAKPlot.linear(xdata, *params)
+        return ydata-self.linear(xdata, *params)
         
     
     def modifyAllData(self):
