@@ -10,12 +10,13 @@ A collection of data handling scripts for plotting scienctific graphs. Based on 
 4. List of containing scripts
 
 # 1. General Documentation:
-*  to be added
+*  TychePlot is collection of scripts for the visialization of scientific Data.
+*  Use or modify the included .ipynb files. 
 
 # 2. History of Changes:
 
-## no release yet:
-* work in progress
+## 1.0:
+*  TychePlot initial release
 
 # 3. Known Issues
 * Wrong Limits raise different uncaught errors. In that case omit limits.
