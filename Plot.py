@@ -153,13 +153,13 @@ class Plot():
                  titleBool=True,
                  legendEdgeSize=1,
                  ax2Labels=True,
-                 spectralDataformat={"separator":";", "skiplines":75}, #jeti csv format
-                 showColAxType=["","lin","lin","lin"],
+                 #spectralDataformat={"separator":";", "skiplines":75}, #jeti csv format
+                 showColAxType=[None,"lin","lin","lin"],
                  xAxisLim=None,
-                 showColAxLim=["",None,None,None],
+                 showColAxLim=[None,None,None,None],
                  colors=['#1f77b4','#d62728','#2ca02c','#9467bd','#8c564b','#e377c2','#7f7f7f','#ff7f0e','#bcbd22','#17becf','#f8e520'],
                  showColLabel=None,
-                 showColLabelUnit=["","X","Y","Y2"],
+                 showColLabelUnit=[None,"X","Y","Y2"],
                  fill="_",
                  show=None,
                  filename=None,
@@ -235,9 +235,11 @@ class Plot():
                         self.showColAxLim[self.showCol]=yLim[0]
                         self.showColAxLim[self.showCol2]=yLim[1]
                     else:
-                        raise
+                        Exception("yLim is or wrong format")
                 except TypeError:
                     self.showColAxLim[self.showCol]=yLim
+            else:
+                raise Exception("yLim is or wrong format")
         
         self.scaleX=scaleX
         if scaleX < 0.6 and customFontsize is None:

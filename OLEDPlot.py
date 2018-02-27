@@ -92,6 +92,7 @@ class OLEDPlot(Plot):
                  pixelsize_mm2=3.8,
                  skipSweepBack=True,
                  noSweepBackMeasured=False,
+                 averageSweepBack=False,
                  specYCol=2,
                  diodYCol=2,
                  averageMedian=True,
@@ -132,7 +133,7 @@ class OLEDPlot(Plot):
         if title is None:
             self.title=titleForm.format(self.showColLabel[self.showCol],name)
         else:
-            self.tilte=title
+            self.title=title
         if spectraFile is None or spectraFile == "":
             warnings.warn("No SpectraFile given, Radiance and EQE will be wrong!")
         if type(spectraFile) is not list and type(spectraFile) is not tuple:
@@ -148,6 +149,7 @@ class OLEDPlot(Plot):
             self.samples=len(self.fileList)
         #initmethods
         self.idealDevice=idealDevice
+        self.averageSweepBack=averageSweepBack
         self.maxEqe=maxEqe
         self.exportDataList=copy.deepcopy(self.dataList)
         self.spectralDataList=self.spectraDataImport()[0]
@@ -254,6 +256,14 @@ class OLEDPlot(Plot):
                     data.limitData(xLim=self.xLimOrig, xCol=self.xColOrig)
                     data.processData(OLEDPlot.remDarkCurr, yCol=3)
                     data.processData(OLEDPlot.absolute, yCol=2)
+                    if self.averageSweepBack and not self.noSweepBackMeasured:
+                        array=data.getData()
+                        array1=array[:int(len(array))//2]
+                        array2=array[int(len(array))//2:]
+                        array2=array2[::-1]
+                        array=[[a,b] for a,b in zip(array1,array2)]
+                        result=np.average(array, axis=1)
+                        data.setData(result)
                     subDataList=[]
                     #print(data.getData())
                     subDataList.append(data.getSplitData2D(xCol=1, yCol=2)[0])
