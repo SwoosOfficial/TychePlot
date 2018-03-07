@@ -66,7 +66,7 @@ class OLEDPlot(Plot):
     
     @classmethod
     def remDarkCurr(cls,phot):
-        return phot-np.amin(phot)
+        return phot-np.average(phot[1:20])
     
     @classmethod
     def candToLumen(cls, cand):
@@ -306,33 +306,43 @@ class OLEDPlot(Plot):
                 data.limitData(xLim=self.xLimOrig, xCol=self.xColOrig)
                 data.processData(OLEDPlot.remDarkCurr, yCol=3)
                 data.processData(OLEDPlot.absolute, yCol=2)
+                if self.averageSweepBack and not self.noSweepBackMeasured:
+                    array=data.getData()
+                    array1=array[:int(len(array))//2]
+                    array2=array[int(len(array))//2:]
+                    array2=array2[::-1]
+                    array=[[a,b] for a,b in zip(array1,array2)]
+                    result=np.average(array, axis=1)
+                    data.setData(result)
                 subDataList=[]
-                subDataList.append(data.getSplitData2D(yCol=2)[0])
-                subDataList.append(data.getSplitData2D(yCol=2)[1]) #Current [2]  
+                #print(data.getData())
+                subDataList.append(data.getSplitData2D(xCol=1, yCol=2)[0])
+                subDataList.append(data.getSplitData2D(xCol=1, yCol=2)[1]) #Current [2]  
                 dens=Data.processDataAndReturnArray(data, self.curToDensity)[:,1]
                 subDataList.append(dens) #Current_density [3]
                 lum=Data.processDataAndReturnArray(data, self.photToCandela, yCol=3)[:,2]
                 subDataList.append(lum) #Luminance [4]
-                subDataList.append(self.candToRadiance(lum,spectralData)) #Radiance [5]
+                rad=self.candToRadiance(lum,spectralData)
+                subDataList.append(rad) #Radiance [5]
                 curEffic=OLEDPlot.calcCurEffic(dens,lum)
                 subDataList.append(curEffic) #Current_efficacy
                 lumEffic=OLEDPlot.calcLumEffic(subDataList[0],dens,lum)
                 subDataList.append(lumEffic) #Luminous_efficacy
-                eqe=self.calcEQE(dens,subDataList[4],spectralData)
+                eqe=self.calcEQE(dens,rad,spectralData)
                 subDataList.append(eqe) #EQE8
                 data.setData(Data.mergeData(subDataList))
                 if self.xLim is not None:
-                    nList.append(data.getFirstIndexWhereGreaterOrEq(1,self.xLim[0]))
-                    mList.append(data.getLastIndexWhereSmallerOrEq(1,self.xLim[1]))
-                try:
-                    n=max(nList)
-                    m=min(mList)
-                    for data in deviceData:
-                        if m==-1:
-                            data.setData(data.getData()[n:])
-                        else:
-                            data.setData(data.getData()[n:m+1])
-                except ValueError:
+                    nList.append(data.getFirstIndexWhereGreaterOrEq(self.xCol,self.xLim[0]))
+                    mList.append(data.getLastIndexWhereSmallerOrEq(self.xCol,self.xLim[1]))
+            try:
+                n=max(nList)
+                m=min(mList)
+                for data in deviceData:
+                    if m==-1:
+                        data.setData(data.getData()[n:])
+                    else:
+                        data.setData(data.getData()[n:m+1])
+            except ValueError:
                     pass
         expectData, errData =self.calcCustomAverage(localDataList)
         self.exportAllData(expectData=expectData, errData=errData, **kwargs)
@@ -341,7 +351,7 @@ class OLEDPlot(Plot):
         
     def importData(self):
         if not self.dataImported:
-            if self.skipSweepBack and not self.noSweepBackMeasured:
+            if self.skipSweepBack and not self.averageSweepBack and not self.noSweepBackMeasured:
                 self.dataList=[[Data(fileToNpArray(pixel, **self.fileFormat)[0][:int(len(fileToNpArray(pixel, **self.fileFormat)[0])//2)], xCol=self.xCol, yCol=self.showCol) for pixel in device] for device in self.fileList]
 
             else:
