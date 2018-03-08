@@ -78,7 +78,7 @@ class OLEDPlot(Plot):
     
     @classmethod
     def calcCurEffic(cls, dens, cand):
-        return cand/dens
+        return cand/(dens*10)
     
 
         
