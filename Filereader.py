@@ -8,8 +8,11 @@ import numpy as np
 
 # In[5]:
 
-def fileToNpArray(filename, separator=",", skiplines=1, backoffset=0, lastlines=0, exceptColumns=[], commaToPoint=False, lastlineNoNewLine=False):
-    file = open(filename,"r")
+def fileToNpArray(filename, separator=",", skiplines=1, backoffset=0, lastlines=0, exceptColumns=[], commaToPoint=False, lastlineNoNewLine=False, fileEnding=None):
+    if fileEnding is None:
+        file = open(filename,"r")
+    else:
+        file = open(filename+fileEnding,"r")
     lines = file.readlines()
     if lastlines != 0:
         lines = lines[:-lastlines]

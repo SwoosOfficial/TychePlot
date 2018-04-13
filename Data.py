@@ -95,17 +95,17 @@ class Data:
         if yCol is None:
                 yCol=self.yCol
         if keepLimits:
-            if isinstance(xLim, list):
+            if isinstance(xLim, list) or isinstance(xLim, tuple):
                 if len(xLim) == 2:
                     data=data[(data[:,xCol-1]>=xLim[0]) & (data[:,xCol-1]<=xLim[1])]
-            if isinstance(yLim, list):
+            if isinstance(yLim, list) or isinstance(yLim, tuple):
                 if len(yLim) == 2:
                     data=data[(data[:,yCol-1]>=yLim[0]) & (data[:,yCol-1]<=yLim[1])]
         else:
-            if isinstance(xLim, list):
+            if isinstance(xLim, list) or isinstance(xLim, tuple):
                 if len(xLim) == 2:
                     data=data[(data[:,xCol-1]>xLim[0]) & (data[:,xCol-1]<xLim[1])]
-            if isinstance(yLim, list):
+            if isinstance(yLim, list) or isinstance(yLim, tuple):
                 if len(yLim) == 2:
                     data=data[(data[:,yCol-1]>yLim[0]) & (data[:,yCol-1]<yLim[1])]
         if list(data) == []:

@@ -696,7 +696,6 @@ class Plot():
             self.axX2=ax.twiny()
             axX2=self.axX2
             axX2.set_xlim(ax.get_xlim())
-            axX2.set_xticklabels(self.xColTicksToXCol2Ticks(ax.get_xticks()))
             axX2.set_xlabel(self.ax2XLabel)
             if self.showColAxType[self.xCol2] == "log":
                 axX2.set_xscale("log", basex=10, subsy=[2,3,4,5,6,7,8,9])
@@ -723,6 +722,8 @@ class Plot():
         if self.titleBool:
             ax.set_title(self.title, fontsize=self.titleFontsize)
         matplotlib.pyplot.tight_layout()
+        if self.xCol2 != 0:
+            axX2.set_xticklabels(self.xColTicksToXCol2Ticks(ax.get_xticks()))
         self.saveFig()
         self._rescaleRcParams()
         matplotlib.pyplot.close(fig)

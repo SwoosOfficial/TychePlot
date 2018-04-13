@@ -65,10 +65,6 @@ class OLEDPlot(Plot):
         return cls.ohmicLaw(volt,conductivity)+np.heaviside(volt-voltOnset,0)*cls.shockleyEquation(volt-voltOnset, saturationCurrent, idealityFactor, temperature)*np.heaviside(sclcOnset-volt,1)+np.heaviside(volt-sclcOnset,0)*cls.gurneyMottEquation(volt, thickness, permittivity, mobility)
     
     @classmethod
-    def remDarkCurr(cls,phot):
-        return phot-np.average(phot[1:20])
-    
-    @classmethod
     def candToLumen(cls, cand):
         return cand*2*np.pi
     
@@ -87,7 +83,7 @@ class OLEDPlot(Plot):
                  name,
                  fileList,
                  spectraFile=None,
-                 fileFormat={"separator":"\t", "skiplines":1},
+                 fileFormat={"separator":"\t", "skiplines":1, "fileEnding":".uil"},
                  title=None,
                  pixelsize_mm2=3.8,
                  skipSweepBack=True,
@@ -119,6 +115,8 @@ class OLEDPlot(Plot):
                  samples=None,
                  idealDevice=-1,
                  maxEqe=5,
+                 darkCurrent=None,
+                 darkCurrentValidPoints=(1,20)
                  **kwargs
                 ):
         Plot.__init__(self, name, fileList, averageMedian=averageMedian, showColAxType=showColAxType, showColAxLim=showColAxLim, showColLabel=showColLabel, showColLabelUnit=showColLabelUnit, fileFormat=fileFormat, legLoc=legLoc, **kwargs)
@@ -147,10 +145,12 @@ class OLEDPlot(Plot):
             self.samples=samples
         else:
             self.samples=len(self.fileList)
-        #initmethods
         self.idealDevice=idealDevice
         self.averageSweepBack=averageSweepBack
         self.maxEqe=maxEqe
+        self.darkCurrent=darkCurrent
+        self.darkCurrentValidPoints=darkCurrentValidPoints
+        #initmethods
         self.exportDataList=copy.deepcopy(self.dataList)
         self.spectralDataList=self.spectraDataImport()[0]
         self.diodeData=self.spectraDataImport()[1]
@@ -189,7 +189,11 @@ class OLEDPlot(Plot):
         Plot.equalizeRanges(diodeFuncData)
         return spectralDataList, diodeFuncData
     
-
+    def remDarkCurr(self,phot):
+        if self.darkCurrent is None:
+            return phot-np.average(phot[self.darkCurrentValidPoints[0]:self.darkCurrentValidPoints[0]])
+        else:
+            return phot-self.darkCurrent
     
     def radToCandela(self, rad, spectralData):
         summe=np.sum([self.diodeData.getSplitData2D()[1][a]*spectralData.getSplitData2D()[1][a] for a in range(0,len(self.diodeData.getSplitData2D()[1]))])
@@ -254,7 +258,7 @@ class OLEDPlot(Plot):
                 mList=[]
                 for data in deviceData:
                     data.limitData(xLim=self.xLimOrig, xCol=self.xColOrig)
-                    data.processData(OLEDPlot.remDarkCurr, yCol=3)
+                    data.processData(self.remDarkCurr, yCol=3)
                     data.processData(OLEDPlot.absolute, yCol=2)
                     if self.averageSweepBack and not self.noSweepBackMeasured:
                         array=data.getData()
@@ -304,7 +308,7 @@ class OLEDPlot(Plot):
             mList=[]
             for data in deviceData:
                 data.limitData(xLim=self.xLimOrig, xCol=self.xColOrig)
-                data.processData(OLEDPlot.remDarkCurr, yCol=3)
+                data.processData(self.remDarkCurr, yCol=3)
                 data.processData(OLEDPlot.absolute, yCol=2)
                 if self.averageSweepBack and not self.noSweepBackMeasured:
                     array=data.getData()
