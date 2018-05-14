@@ -76,7 +76,22 @@ class OLEDPlot(Plot):
     def calcCurEffic(cls, dens, cand):
         return cand/(dens*10)
     
-
+    @classmethod
+    def doubleLogSlope(cls, volt, dens):
+        oldDict=np.seterr(all="ignore")
+        V=np.log(volt)
+        j=np.log(dens)
+        deriv=np.gradient(j,V)
+        np.seterr(**oldDict)
+        return deriv
+    
+    @classmethod
+    def semiLogSlope(cls, volt, dens):
+        oldDict=np.seterr(all="ignore")
+        j=np.log(dens)
+        deriv=np.gradient(j,volt)
+        np.seterr(**oldDict)
+        return deriv
         
     
     def __init__(self,
@@ -94,9 +109,9 @@ class OLEDPlot(Plot):
                  averageMedian=True,
                  specBg=None, #background column of Jeti spectra 
                  spectraRange=(390,790,401),
-                 showColAxType=["lin","lin","log","log","log","log","lin","lin","lin"],
-                 showColAxLim=[None,None,None,None,None,None,None,None,None],
-                 showColLabel= ["","Voltage","Current","Current Density", "Luminance", "Radiance","Current Efficiency","Luminous Efficacy","EQE"],
+                 showColAxType=["lin","lin","log","log","log","log","lin","lin","lin","lin"],
+                 showColAxLim=[None,None,None,None,None,None,None,None,None,None],
+                 showColLabel= ["","Voltage","Current","Current Density", "Luminance", "Radiance","Current Efficiency","Luminous Efficacy","EQE", "Exponent"],
                  showColLabelUnit=["",
                   "Voltage (V)",
                   "Current (A)",
@@ -105,7 +120,8 @@ class OLEDPlot(Plot):
                   "Radiance ($\\tfrac{\\mathrm{W}{\\mathrm{sr}\\cdot\\mathrm{m}^2}$)",
                   "Current Efficiency ($\\tfrac{\\mathrm{cd}}{\\mathrm{A}}$)",
                   "Luminous Efficacy ($\\tfrac{\\mathrm{lm}}{\\mathrm{W}}$)",
-                  "EQE (\\%)"
+                  "EQE (\\%)",
+                  "Exponent"
                  ],
                  photodiodeFunctionFile=os.path.dirname(os.path.abspath(inspect.getsourcefile(Data)))+"/luminFunction.csv",
                  spectralDataFormat={"separator":";", "skiplines":82}, #jeti csv format
@@ -116,7 +132,7 @@ class OLEDPlot(Plot):
                  idealDevice=-1,
                  maxEqe=5,
                  darkCurrent=None,
-                 darkCurrentValidPoints=(1,20)
+                 darkCurrentValidPoints=(1,20),
                  **kwargs
                 ):
         Plot.__init__(self, name, fileList, averageMedian=averageMedian, showColAxType=showColAxType, showColAxLim=showColAxLim, showColLabel=showColLabel, showColLabelUnit=showColLabelUnit, fileFormat=fileFormat, legLoc=legLoc, **kwargs)
@@ -191,7 +207,7 @@ class OLEDPlot(Plot):
     
     def remDarkCurr(self,phot):
         if self.darkCurrent is None:
-            return phot-np.average(phot[self.darkCurrentValidPoints[0]:self.darkCurrentValidPoints[0]])
+            return phot-np.average(phot[self.darkCurrentValidPoints[0]:self.darkCurrentValidPoints[1]])
         else:
             return phot-self.darkCurrent
     
@@ -269,8 +285,8 @@ class OLEDPlot(Plot):
                         result=np.average(array, axis=1)
                         data.setData(result)
                     subDataList=[]
-                    #print(data.getData())
-                    subDataList.append(data.getSplitData2D(xCol=1, yCol=2)[0])
+                    volt=data.getSplitData2D(xCol=1, yCol=2)[0]
+                    subDataList.append(volt)
                     subDataList.append(data.getSplitData2D(xCol=1, yCol=2)[1]) #Current [2]  
                     dens=Data.processDataAndReturnArray(data, self.curToDensity)[:,1]
                     subDataList.append(dens) #Current_density [3]
@@ -284,10 +300,16 @@ class OLEDPlot(Plot):
                     subDataList.append(lumEffic) #Luminous_efficacy
                     eqe=self.calcEQE(dens,rad,spectralData)
                     subDataList.append(eqe) #EQE8
+                    power=self.doubleLogSlope(np.abs(volt),np.abs(dens))
+                    subDataList.append(power) #power9
                     data.setData(Data.mergeData(subDataList))
                     if self.xLim is not None:
-                        nList.append(data.getFirstIndexWhereGreaterOrEq(self.xCol,self.xLim[0]))
-                        mList.append(data.getLastIndexWhereSmallerOrEq(self.xCol,self.xLim[1]))
+                        if self.limCol is None:
+                            nList.append(data.getFirstIndexWhereGreaterOrEq(self.xCol,self.xLim[0]))
+                            mList.append(data.getLastIndexWhereSmallerOrEq(self.xCol,self.xLim[1]))
+                        else:
+                            nList.append(data.getFirstIndexWhereGreaterOrEq(self.limCol,self.xLim[0]))
+                            mList.append(data.getLastIndexWhereSmallerOrEq(self.limCol,self.xLim[1]))
                 try:
                     n=max(nList)
                     m=min(mList)

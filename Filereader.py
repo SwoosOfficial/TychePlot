@@ -70,6 +70,19 @@ def fileToNpArray(filename, separator=",", skiplines=1, backoffset=0, lastlines=
         fileToNpArray.array, descList = fileToNpArray(filename, separator=separator, skiplines=skiplines)"""
     return fileToNpArray.array, descList
 
-
+def npArrayToFile(filename, array, preString=None, separator=",", fileEnding=None):
+    if fileEnding is None:
+        file = open(filename,"w")
+    else:
+        file = open(filename+fileEnding,"w")
+    if preString is not None:
+        file.write(preString)
+    for n in range(0,len(array)):
+        line=""
+        for element in array[n]:
+            line+=str(element)+separator
+        line=line[:-len(separator)]
+        file.write(line+"\n")
+    file.close()
 
 

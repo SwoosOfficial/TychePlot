@@ -139,6 +139,7 @@ class Plot():
                  fileFormat={"separator":"\t", "skiplines":1},
                  showColTup=(2,3),
                  xLim=None,
+                 limCol=None,
                  xLimOrig=None,
                  yLim=None,
                  scaleX=1,
@@ -312,6 +313,7 @@ class Plot():
         self.ax2XLim=self.showColAxLim[self.xCol2]
         self.legendBool=legendBool
         self.titleFontsize=titleFontsize
+        self.limCol=limCol
         #inits
         self.__initFileList(fileList, errors, labels, show, fitLabels)
         self.dataList=self.__importData()

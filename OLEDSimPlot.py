@@ -8,49 +8,34 @@ class OLEDSimPlot(Plot):
     e=1.602*10**-19 #As
     eps_0=8.85*10**-12 #As/Vm
     eps_r=3.5
-    carrierType=1
-    offsetCathode=1 #1=true -1=false
-    V=0
-    E=V/(200*10**-9)#V/m; 200nm organics
-    wf_m=-4.2*e #J
-    wf_o=-2.8*e #J
-    Delta=wf_m-wf_o
-    initpos=0
-    x_scale=10**9
-    x_min=-7
-    metalContactAnode=False
-    metalContactCathode=False
+
     
     @classmethod
     def points(cls,x,dim):
         return int(x//dim)
 
-    @classmethod
-    def V_0(cls, x, wf, b):
-        if b*cls.offsetCathode==-3 or abs(b)==2:
-            return [cls.carrierType*wf if a>=0 else 0.0 for a in x]
-        if b*cls.offsetCathode==3:
-            return [cls.carrierType*wf+cls.V*cls.e if a>=0 else 0.0 for a in x]
+    def V_0(self, x, wf, b):
+        if b*self.offsetCathode==-3 or abs(b)==2:
+            return [self.carrierType*wf if a>=0 else 0.0 for a in x]
+        if b*self.offsetCathode==3:
+            return [self.carrierType*wf+self.V*self.e if a>=0 else 0.0 for a in x]
 
-    @classmethod
-    def V_1(cls, x, wf, points,sigma=0.1*e, mu=0):
+    def V_1(self, x, wf, points,sigma=0.1*e, mu=0):
         z=np.random.normal(mu, sigma, points)
-        return [cls.carrierType*wf+c if a>=0 else 0.0 for a,c in zip(x,z)]
+        return [self.carrierType*wf+c if a>=0 else 0.0 for a,c in zip(x,z)]
 
-    @classmethod
-    def V_2(cls, x, b):
+    def V_2(self, x, b):
         if b==0:
             return 0
         if b==-1:
-            return [cls.carrierType*(cls.e**2)/(16*np.pi*cls.eps_0*cls.eps_r*(a-x[0])) if a>=0 else 0.0 for a in x]
+            return [self.carrierType*(self.e**2)/(16*np.pi*self.eps_0*self.eps_r*(a-x[0])) if a>=0 else 0.0 for a in x]
         if b==1:
-            return [cls.carrierType*(cls.e**2)/(16*np.pi*cls.eps_0*cls.eps_r*(a-x[len(x)-1])) if a>=0 else 0.0 for a in x]
+            return [self.carrierType*(self.e**2)/(16*np.pi*self.eps_0*self.eps_r*(a-x[len(x)-1])) if a>=0 else 0.0 for a in x]
 
-    @classmethod
-    def V_3(cls, x, offset, E=None):
+    def V_3(self, x, offset, E=None):
         if E is None:
-            E=OLEDSimPlot.E
-        return [cls.carrierType*cls.e*E*(a-offset) if a>=0 else 0.0 for a in x]
+            E=self.E
+        return [self.carrierType*self.e*E*(a-offset) if a>=0 else 0.0 for a in x]
 
     
     def __init__(self, name, materials,
@@ -61,9 +46,39 @@ class OLEDSimPlot(Plot):
                   "Depth (nm)",
                   "Potential (eV)"               
                  ],
+                 carrierType=1,
+                 offsetCathode=1, #1=true -1=false
+                 V=0,
+                 E=None,
+                 wf_m=-4.2*e, #J,
+                 wf_o=-2.8*e, #J,
+                 Delta=None,
+                 initpos=0,
+                 x_scale=10**9,
+                 x_min=-7,
+                 metalContactAnode=False,
+                 metalContactCathode=False,
                  **kwargs):
         Plot.__init__(self, name,[], dataImported=True, overrideFileList=True, showColAxType=showColAxType, showColAxLim=showColAxLim, showColLabel=showColLabel, showColLabelUnit=showColLabelUnit,  **kwargs)
         self.materials=materials
+        self.carrierType=carrierType
+        self.offsetCathode=offsetCathode
+        self.V=V
+        self.wf_m=wf_m
+        self.wf_o=wf_o
+        self.initpos=initpos
+        self.x_scale=x_scale
+        self.x_min=x_min
+        self.metalContactAnode=metalContactAnode
+        self.metalContactCathode=False
+        if Delta is None:
+            self.Delta=wf_m-wf_o
+        else:
+            self.Delta=Delta
+        if E is None:
+            self.E=V/(200*10**-9)#V/m; 200nm organics
+        else:
+            self.E=E
         self.stack=Stack(self.materials)
         
         
@@ -72,7 +87,7 @@ class OLEDSimPlot(Plot):
 
 class Material:
     iD=0
-    def __init__(self, thickness, CBLike, name="Unknown Material", x=0, y=0, vacY=0, dim=10**-10, metallic=False, height=1, outsourceDesc=None):
+    def __init__(self, thickness, CBLike, name="Unknown Material", x=0, y=0, vacY=0, dim=10**-10, metallic=False, height=0, outsourceDesc=None):
         self.name=name
         self.thickness = thickness
         self.CBLike = CBLike
@@ -164,14 +179,18 @@ class Stack:
                     ax.plot(np.asarray(m.x)*plot.x_scale,m.y_3*e**-1, color=Stack.Cz[m.id2], label=m.name2)
                     ax.plot(np.asarray(m.x)*plot.x_scale,m.y_4*e**-1, color=Stack.Cz[m.id2])
                     if m.outsourceDesc is None:
-                        ax.text(m.x[(len(m.x)-1)//2]*plot.x_scale,(m.y_4[(len(m.x)-1)//2]+m.y_3[(len(m.x)-1)//2])/2*e**-1*m.height**-1,m.name+":"+m.name2, ha="center", va="center")
+                        ax.text(m.x[(len(m.x)-1)//2]*plot.x_scale,(m.y_4[(len(m.x)-1)//2]+m.y_3[(len(m.x)-1)//2])/2*e**-1+m.height,m.name+":"+m.name2, ha="center", va="center")
                     else:
-                        ax.annotate(m.name+":"+m.name2,xy=(m.x[(len(m.x)-1)//2]*plot.x_scale,(m.y_4[(len(m.x)-1)//2]+m.y_3[(len(m.x)-1)//2])/2*e**-1*m.height**-1),xytext=(m.x[(len(m.x)-1)//2]*plot.x_scale,m.outsourceDesc), arrowprops=dict(arrowstyle="->", connectionstyle="arc3"), ha="center", va="center", )
+                        ax.annotate(m.name+":"+m.name2,xy=(m.x[(len(m.x)-1)//2]*plot.x_scale,(m.y_4[(len(m.x)-1)//2]+m.y_3[(len(m.x)-1)//2])/2*e**-1+m.height),xytext=(m.x[(len(m.x)-1)//2]*plot.x_scale,m.outsourceDesc), arrowprops=dict(arrowstyle="->", connectionstyle="arc3"), ha="center", va="center")
+                        
                     ax.fill_between(np.asarray(m.x)*plot.x_scale,m.y_3*e**-1,m.y_4*e**-1, facecolor=Stack.Cz[m.id2],interpolate=False, alpha=0.1)
                     ax.fill_between(np.asarray(m.x)*plot.x_scale,m.y_2*e**-1,m.y_4*e**-1, facecolor=Stack.Cz[m.id],interpolate=False, alpha=0.1)
                     ax.fill_between(np.asarray(m.x)*plot.x_scale,m.y*e**-1,m.y_3*e**-1, facecolor=Stack.Cz[m.id],interpolate=False, alpha=0.1)
                 else:
-                    ax.text(m.x[(len(m.x)-1)//2]*plot.x_scale,(m.y_2[(len(m.x)-1)//2]*m.height+m.y[(len(m.x)-1)//2])/2*e**-1*m.height**-1,m.name, ha="center", va="center")
+                    if m.outsourceDesc is None:
+                        ax.text(m.x[(len(m.x)-1)//2]*plot.x_scale,(m.y_2[(len(m.x)-1)//2]+m.y[(len(m.x)-1)//2])/2*e**-1+m.height,m.name, ha="center", va="center")
+                    else:
+                        ax.annotate(m.name, xy=(m.x[(len(m.x)-1)//2]*plot.x_scale,(m.y_2[(len(m.x)-1)//2]+m.y[(len(m.x)-1)//2])/2*e**-1+m.height), xytext=(m.x[(len(m.x)-1)//2]*plot.x_scale,m.outsourceDesc), arrowprops=dict(arrowstyle="->", connectionstyle="arc3"), ha="center", va="center")  
                     ax.fill_between(np.asarray(m.x)*plot.x_scale,m.y*e**-1,m.y_2*e**-1, facecolor=Stack.Cz[m.id],interpolate=False, alpha=0.1)
         for m,b in zip(self.Materials, self.B):
             if m.metallic:
@@ -180,21 +199,21 @@ class Stack:
                     m.vacY=[d-m.CBLike for d in m.y]
                     ax.plot(np.asarray(m.x)*plot.x_scale,np.asarray(m.y)*e**-1, color=Stack.C[b-1], label=m.name)
                     ax.fill_between(np.asarray(m.x)*plot.x_scale,x_min,np.asarray(m.y)*e**-1, interpolate=True, facecolor=Stack.C[b-1], alpha=0.3)
-                    ax.text(m.x[(len(m.x)-1)//2]*plot.x_scale,(m.y[0]+plot.x_min*e)/2*e**-1*m.height,m.name, ha="center", va="center")
+                    ax.text(m.x[(len(m.x)-1)//2]*plot.x_scale,(m.y[0]+plot.x_min*e)/2*e**-1+m.height,m.name, ha="center", va="center")
                     ax.plot(np.asarray(m.x)*plot.x_scale,np.asarray(m.vacY)*e**-1, "k-",label="Vacuum")
                 elif b==2 and plot.metalContactCathode:
                     m.y=plot.V_0(m.x,a, 3*plot.offsetCathode)
                     m.vacY=[d-m.CBLike for d in m.y]
                     ax.plot(np.asarray(m.x)*plot.x_scale,np.asarray(m.y)*e**-1, color=Stack.C[b-1], label=m.name)
                     ax.fill_between(np.asarray(m.x)*plot.x_scale,plot.x_min,np.asarray(m.y)*e**-1, interpolate=True, facecolor=Stack.C[b-1], alpha=0.3)
-                    ax.text(m.x[(len(m.x)-1)//2]*plot.x_scale,(m.y[0]+plot.x_min*e)/2*e**-1*m.height,m.name, ha="center", va="center")
+                    ax.text(m.x[(len(m.x)-1)//2]*plot.x_scale,(m.y[0]+plot.x_min*e)/2*e**-1+m.height,m.name, ha="center", va="center")
                     ax.plot(np.asarray(m.x)*plot.x_scale,np.asarray(m.vacY)*e**-1, "k-",label="Vacuum")
                 else:
                     m.y=plot.V_0(m.x,m.CBLike, b)
                     m.vacY=plot.V_0(m.x,0,b)
                     ax.plot(np.asarray(m.x)*plot.x_scale,np.asarray(m.y)*e**-1, color=Stack.C[b-1], label=m.name)
                     ax.fill_between(np.asarray(m.x)*plot.x_scale,plot.x_min,np.asarray(m.y)*plot.e**-1,interpolate=True, facecolor=Stack.C[b-1], alpha=0.3)
-                    ax.text(m.x[(len(m.x)-1)//2]*plot.x_scale,(m.y[0]+plot.x_min*plot.e)/2*plot.e**-1*m.height,m.name, ha="center", va="center")
+                    ax.text(m.x[(len(m.x)-1)//2]*plot.x_scale,(m.y[0]+plot.x_min*plot.e)/2*plot.e**-1+m.height,m.name, ha="center", va="center")
                     ax.plot(np.asarray(m.x)*plot.x_scale,np.asarray(m.vacY)*plot.e**-1, "k-")
         if plot.titleBool:
             ax.set_title(plot.title, fontsize=plot.titleFontSize)
