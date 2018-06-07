@@ -58,6 +58,10 @@ class SpectraPlot(Plot):
         return amp/(np.sqrt(2*np.pi*sigma**2))*np.exp(-((x-mu)**2/(2*sigma**2)))
     
     @classmethod
+    def doubleGauss(cls, x, mu, amp, sigma, mu2, amp2, sigma2):
+        return amp/(np.sqrt(2*np.pi*sigma**2))*np.exp(-((x-mu)**2/(2*sigma**2)))+amp2/(np.sqrt(2*np.pi*sigma2**2))*np.exp(-((x-mu2)**2/(2*sigma2**2)))
+    
+    @classmethod
     def twoGaussSplines(cls, x, mu, amp, sigma, sigma2):
         return amp*np.exp(-((x-mu)**2/(2*sigma**2)))*np.heaviside(x-mu,0)+amp*np.exp(-((x-mu)**2/(2*sigma2**2)))*np.heaviside(mu-x,0)
     
@@ -174,10 +178,23 @@ class SpectraPlot(Plot):
                     if type(self.fitterList[n]) is list:
                         for fitter in self.fitterList[n]:
                             if fitter.desc != None:
-                                ax.annotate(s=fitter.desc.format(fitter.params[self.xParamPos]), size=self.customFontsize[2], xy=(fitter.params[self.xParamPos],np.amax(fitter.CurveData.getSplitData2D()[1])-0.1*np.amax(fitter.CurveData.getSplitData2D()[1])), xytext=fitter.textPos, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n], edgecolor=self.fitColors[n], linewidth=mpl.rcParams["lines.linewidth"]))
+                                if self.xCol!=4:
+                                    se=fitter.desc.format(np.round(fitter.params[self.xParamPos]))
+                                else:
+                                    try:
+                                           se=fitter.desc.format(np.round(self.convFac/fitter.params[self.xParamPos],decimals=0),np.round(fitter.params[self.xParamPos],decimals=1))
+                                    except IndexError:
+                                        se=fitter.desc.format(np.round(self.convFac/fitter.params[self.xParamPos]))
+                                ax.annotate(s=se, size=self.customFontsize[2], xy=(fitter.params[self.xParamPos],np.amax(fitter.CurveData.getSplitData2D()[1])-0.1*np.amax(fitter.CurveData.getSplitData2D()[1])), xytext=fitter.textPos, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n], edgecolor=self.fitColors[n], linewidth=mpl.rcParams["lines.linewidth"]))
                     elif self.fitterList[n].desc != None:
                         fitter=self.fitterList[n]
-                        se=fitter.desc.format(fitter.params[self.xParamPos])
+                        if self.xCol!=4:
+                            se=fitter.desc.format(np.round(fitter.params[self.xParamPos]))
+                        else:
+                            try:
+                                se=fitter.desc.format(np.round(self.convFac/fitter.params[self.xParamPos],decimals=0),np.round(fitter.params[self.xParamPos],decimals=1))
+                            except IndexError:
+                                se=fitter.desc.format(np.round(self.convFac/fitter.params[self.xParamPos],decimals=0))
                         sze=self.customFontsize[2]
                         xsy=(fitter.params[self.xParamPos],np.amax(fitter.CurveData.getSplitData2D()[1])-0.1*np.amax(fitter.CurveData.getSplitData2D()[1]))
                         arprps=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n], edgecolor=self.fitColors[n], linewidth=mpl.rcParams["lines.linewidth"])

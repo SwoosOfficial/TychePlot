@@ -150,7 +150,7 @@ class Plot():
                  xColOrig=1,
                  title=None,
                  HWratio=3/4, # height to width ratio
-                 fig_width_pt=448.13095, # get it by \the\textwidth
+                 fig_width_pt=424.75906, # get it by \the\textwidth
                  titleBool=True,
                  legendEdgeSize=1,
                  ax2Labels=True,
