@@ -106,10 +106,16 @@ class Plot():
                     else:
                         temp=[errors[m][1] for m in range(0,len(self.fileList))]
                     self.errors=errors
+                    self.show=self.errors
                 except IndexError:
                     raise ListShapeException("The errors' list has to be formatted like: [[sampleAerrorAxis1,sampleAerrorAxis2],[sampleBerrorAxis1,sampleBerrorAxis2]]")
+                except TypeError:
+                    if type(errors) == bool or isinstance(errors, (list,tuple)):
+                        self.show=[[True,True] for device in self.fileList]
+                    else:
+                        raise ListShapeException("The error's TypeError")
+                
                 self.labels=["Sample {:d}".format(m+1) for m in range(0,len(self.fileList))]
-                self.show=self.errors
             if show is not None:
                 try:
                     if self.showCol is 0 or self.showCol2 is 0:
@@ -159,6 +165,9 @@ class Plot():
                  xAxisLim=None,
                  showColAxLim=[None,None,None,None],
                  colors=['#1f77b4','#d62728','#2ca02c','#9467bd','#8c564b','#e377c2','#7f7f7f','#ff7f0e','#bcbd22','#17becf','#f8e520'],
+                 linestyles=["-","--",":","-."],
+                 iterLinestyles=False,
+                 linestyleOffset=0,
                  showColLabel=None,
                  showColLabelUnit=[None,"X","Y","Y2"],
                  fill="_",
@@ -201,7 +210,8 @@ class Plot():
                  xAxisTickLabels=None,
                  xAxisTicks=None,
                  legendBool=True,
-                 titleFontsize="x-large"
+                 titleFontsize="x-large",
+                 customLabelAx2=None
                 ):
         #static inits
         self.ax=None
@@ -282,8 +292,17 @@ class Plot():
         self.errorTypeDown=errorTypeDown
         self.ax2errorTypeUp=ax2errorTypeUp
         self.ax2errorTypeDown=ax2errorTypeDown
-        self.ls=ls
-        self.ax2ls=ax2ls
+        self.iterLinestyles=iterLinestyles
+        self.linestyles=linestyles
+        self.linestyleOffset=linestyleOffset
+        if iterLinestyles:
+            self.ls=linestyles[0]
+            self.ax2ls=linestyles[0]
+            self.ax1color=colors[0]
+            self.ax2color=colors[1]
+        else:
+            self.ls=ls
+            self.ax2ls=ax2ls
         self.overrideErrorTypes=overrideErrorTypes
         self.overrideFileList=overrideFileList
         self.filename=filename
@@ -314,6 +333,7 @@ class Plot():
         self.legendBool=legendBool
         self.titleFontsize=titleFontsize
         self.limCol=limCol
+        self.customLabelAx2=customLabelAx2
         #inits
         self.__initFileList(fileList, errors, labels, show, fitLabels)
         self.dataList=self.__importData()
@@ -619,50 +639,110 @@ class Plot():
         colorOffset=self.colorOffset
         ax=self.ax
         ax2=self.ax2
-        for n in range(0,len(expectData)):
-            if self.show[n][0]:
-                if self.errors[n][0]:
-                    AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol), yerr=[self.logErr[self.errorTypeDown][n][:,showCol-1],self.logErr[self.errorTypeUp][n][:,showCol-1]], c=colors[n], capsize=self.capsize, capthick=self.capthick , ls=self.ls, label=labels[n], errorevery=self.showErrorOnlyEvery)
-                else:
-                    AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol), c=colors[n], ls=self.ls, label=labels[n])
-                if self.fitList is not None and self.fitterList[n] is not None:
-                    if type(self.fitterList[n]) is list:
-                        for fitter in self.fitterList[n]:
-                            FIT=ax.errorbar(*fitter.CurveData.getSplitData2D(), c=self.fitColors[n], ls=self.fitLs, label=self.fitLabels[n], alpha=self.fitAlpha)
+        linestyles=self.linestyles
+        linestyleOffset=self.linestyleOffset
+        if self.iterLinestyles:
+            for n in range(0,len(expectData)):
+                if self.show[n][0]:
+                    if self.errors[n][0]:
+                        AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol), yerr=[self.logErr[self.errorTypeDown][n][:,showCol-1],self.logErr[self.errorTypeUp][n][:,showCol-1]], c=self.ax1color, capsize=self.capsize, capthick=self.capthick , ls=linestyles[n], label=labels[n], errorevery=self.showErrorOnlyEvery)
                     else:
-                        FIT=ax.errorbar(*self.fitterList[n].CurveData.getSplitData2D(), c=self.fitColors[n], ls=self.fitLs, label=self.fitLabels[n], alpha=self.fitAlpha)
-                for a in AX[1]:
-                    a.set_alpha(self.erroralphabar)
-                for b in AX[2]:
-                    b.set_alpha(self.erroralpha)
-            if self.show[n][1] and self.showCol2 is not 0:
-                labelZ=labels[n]+" "+self.showColLabel[self.showCol2].lower()
-                if self.errors[n][1]:
-                    AX2=ax2.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol2), yerr=[self.logErr[self.ax2errorTypeDown][n][:,showCol2-1],self.logErr[self.ax2errorTypeUp][n][:,showCol2-1]], capsize=self.capsize, capthick=self.capthick, c=colors[n+colorOffset], ls=self.ax2ls, label=labelZ,  errorevery=self.showErrorOnlyEvery)
-                else:
-                    AX2=ax2.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol2), c=colors[n+colorOffset], ls=self.ax2ls, label=labelZ)
-                if self.fitList is not None and self.fitterList[n] is not None:
-                    if type(self.fitterList[n]) is list:
-                        for fitter in self.fitterList[n]:
+                        AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol), c=self.ax1color, ls=linestyles[n], label=labels[n])
+                    if self.fitList is not None and self.fitterList[n] is not None:
+                        if type(self.fitterList[n]) is list:
+                            for fitter in self.fitterList[n]:
+                                FIT=ax.errorbar(*fitter.CurveData.getSplitData2D(), c=self.fitColors[n], ls=self.fitLs, label=self.fitLabels[n], alpha=self.fitAlpha)
+                        else:
+                            FIT=ax.errorbar(*self.fitterList[n].CurveData.getSplitData2D(), c=self.fitColors[n], ls=self.fitLs, label=self.fitLabels[n], alpha=self.fitAlpha)
+                    for a in AX[1]:
+                        a.set_alpha(self.erroralphabar)
+                    for b in AX[2]:
+                        b.set_alpha(self.erroralpha)
+                if self.show[n][1] and self.showCol2 is not 0:
+                    if self.customLabelAx2 is not None:
+                        if not isinstance(self.customLabelAx2, str):
+                            labelZ=self.customLabelAx2[n]
+                        else:
+                            labelZ=self.customLabelAx2
+                    else:
+                        labelZ=labels[n]+" "+self.showColLabel[self.showCol2].lower()
+                    if self.errors[n][1]:
+                        AX2=ax2.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol2), yerr=[self.logErr[self.ax2errorTypeDown][n][:,showCol2-1],self.logErr[self.ax2errorTypeUp][n][:,showCol2-1]], capsize=self.capsize, capthick=self.capthick, c=self.ax2color, ls=linestyles[n+linestyleOffset], label=labelZ,  errorevery=self.showErrorOnlyEvery)
+                    else:
+                        AX2=ax2.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol2), c=self.ax2color, ls=linestyles[n+linestyleOffset], label=labelZ)
+                    if self.fitList is not None and self.fitterList[n] is not None:
+                        if type(self.fitterList[n]) is list:
+                            for fitter in self.fitterList[n]:
+                                try:
+                                    fitter.fit(yCol=self.showCol2)
+                                except RuntimeError as err:
+                                    raise FitException(n,fitList[n],err)
+                                fitter.doFitCurveData()
+                                fitter.limitData(xLim=fitter.curveDataXLim, feature=2)
+                                FIT2=ax2.errorbar(*fitter.CurveData.getSplitData2D(), c=self.fitColors[n+colorOffset], ls=self.fitLs, label=self.fitLabels[n], alpha=self.fitAlpha)
+                        else:
                             try:
-                                fitter.fit(yCol=self.showCol2)
+                                self.fitterList[n].fit(yCol=self.showCol2)
                             except RuntimeError as err:
                                 raise FitException(n,fitList[n],err)
-                            fitter.doFitCurveData()
-                            fitter.limitData(xLim=fitter.curveDataXLim, feature=2)
-                            FIT2=ax2.errorbar(*fitter.CurveData.getSplitData2D(), c=self.fitColors[n+colorOffset], ls=self.fitLs, label=self.fitLabels[n], alpha=self.fitAlpha)
+                            self.fitterList[n].doFitCurveData()
+                            self.fitterList[n].limitData(xLim=fitter.curveDataXLim, feature=2)
+                            FIT2=ax2.errorbar(*self.fitterList[n].CurveData.getSplitData2D(), c=self.fitColors[n+colorOffset], ls=self.fitLs, label=self.fitLabels[n], alpha=self.fitAlpha)
+                    for a in AX2[1]:
+                        a.set_alpha(self.ax2erroralpha)
+                    for b in AX2[2]:
+                        b.set_alpha(self.ax2erroralphabar)
+        else:
+            for n in range(0,len(expectData)):
+                if self.show[n][0]:
+                    if self.errors[n][0]:
+                        AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol), yerr=[self.logErr[self.errorTypeDown][n][:,showCol-1],self.logErr[self.errorTypeUp][n][:,showCol-1]], c=colors[n], capsize=self.capsize, capthick=self.capthick , ls=self.ls, label=labels[n], errorevery=self.showErrorOnlyEvery)
                     else:
-                        try:
-                            self.fitterList[n].fit(yCol=self.showCol2)
-                        except RuntimeError as err:
-                            raise FitException(n,fitList[n],err)
-                        self.fitterList[n].doFitCurveData()
-                        self.fitterList[n].limitData(xLim=fitter.curveDataXLim, feature=2)
-                        FIT2=ax2.errorbar(*self.fitterList[n].CurveData.getSplitData2D(), c=self.fitColors[n+colorOffset], ls=self.fitLs, label=self.fitLabels[n], alpha=self.fitAlpha)
-                for a in AX2[1]:
-                    a.set_alpha(self.ax2erroralpha)
-                for b in AX2[2]:
-                    b.set_alpha(self.ax2erroralphabar)
+                        AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol), c=colors[n], ls=self.ls, label=labels[n])
+                    if self.fitList is not None and self.fitterList[n] is not None:
+                        if type(self.fitterList[n]) is list:
+                            for fitter in self.fitterList[n]:
+                                FIT=ax.errorbar(*fitter.CurveData.getSplitData2D(), c=self.fitColors[n], ls=self.fitLs, label=self.fitLabels[n], alpha=self.fitAlpha)
+                        else:
+                            FIT=ax.errorbar(*self.fitterList[n].CurveData.getSplitData2D(), c=self.fitColors[n], ls=self.fitLs, label=self.fitLabels[n], alpha=self.fitAlpha)
+                    for a in AX[1]:
+                        a.set_alpha(self.erroralphabar)
+                    for b in AX[2]:
+                        b.set_alpha(self.erroralpha)
+                if self.show[n][1] and self.showCol2 is not 0:
+                    if self.customLabelAx2 is not None:
+                        if not isinstance(self.customLabelAx2, str):
+                            labelZ=self.customLabelAx2[n]
+                        else:
+                            labelZ=self.customLabelAx2
+                    else:
+                        labelZ=labels[n]+" "+self.showColLabel[self.showCol2].lower()
+                    if self.errors[n][1]:
+                        AX2=ax2.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol2), yerr=[self.logErr[self.ax2errorTypeDown][n][:,showCol2-1],self.logErr[self.ax2errorTypeUp][n][:,showCol2-1]], capsize=self.capsize, capthick=self.capthick, c=colors[n+colorOffset], ls=self.ax2ls, label=labelZ,  errorevery=self.showErrorOnlyEvery)
+                    else:
+                        AX2=ax2.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol2), c=colors[n+colorOffset], ls=self.ax2ls, label=labelZ)
+                    if self.fitList is not None and self.fitterList[n] is not None:
+                        if type(self.fitterList[n]) is list:
+                            for fitter in self.fitterList[n]:
+                                try:
+                                    fitter.fit(yCol=self.showCol2)
+                                except RuntimeError as err:
+                                    raise FitException(n,fitList[n],err)
+                                fitter.doFitCurveData()
+                                fitter.limitData(xLim=fitter.curveDataXLim, feature=2)
+                                FIT2=ax2.errorbar(*fitter.CurveData.getSplitData2D(), c=self.fitColors[n+colorOffset], ls=self.fitLs, label=self.fitLabels[n], alpha=self.fitAlpha)
+                        else:
+                            try:
+                                self.fitterList[n].fit(yCol=self.showCol2)
+                            except RuntimeError as err:
+                                raise FitException(n,fitList[n],err)
+                            self.fitterList[n].doFitCurveData()
+                            self.fitterList[n].limitData(xLim=fitter.curveDataXLim, feature=2)
+                            FIT2=ax2.errorbar(*self.fitterList[n].CurveData.getSplitData2D(), c=self.fitColors[n+colorOffset], ls=self.fitLs, label=self.fitLabels[n], alpha=self.fitAlpha)
+                    for a in AX2[1]:
+                        a.set_alpha(self.ax2erroralpha)
+                    for b in AX2[2]:
+                        b.set_alpha(self.ax2erroralphabar)
               
         
     def doPlot(self):

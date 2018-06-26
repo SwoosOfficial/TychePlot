@@ -133,6 +133,7 @@ class OLEDPlot(Plot):
                  maxEqe=5,
                  darkCurrent=None,
                  darkCurrentValidPoints=(1,20),
+                 measErrors={"I_p":5*10**-12,"r":5*10**-3,"s_max":0.01608,"A_pixel":10**-7}
                  **kwargs
                 ):
         Plot.__init__(self, name, fileList, averageMedian=averageMedian, showColAxType=showColAxType, showColAxLim=showColAxLim, showColLabel=showColLabel, showColLabelUnit=showColLabelUnit, fileFormat=fileFormat, legLoc=legLoc, **kwargs)
@@ -166,6 +167,7 @@ class OLEDPlot(Plot):
         self.maxEqe=maxEqe
         self.darkCurrent=darkCurrent
         self.darkCurrentValidPoints=darkCurrentValidPoints
+        self.measErrors=measErrors
         #initmethods
         self.exportDataList=copy.deepcopy(self.dataList)
         self.spectralDataList=self.spectraDataImport()[0]
@@ -240,6 +242,15 @@ class OLEDPlot(Plot):
         dens[0:n]=0
         rad=(self.maxEqe*dens*10*OLEDPlot.h*OLEDPlot.c*sum2)/(np.pi*OLEDPlot.e*100)
         return self.candToPhotoCurr(self.radToCandela(rad, spectralData))
+    
+    def addMeasError(self,data):
+        #Volterr
+        currErr=np.absolute(self.measError["I_p"]+data[1]*0)
+        densErr=np.sqrt((self.curToDensity(data[2])/self.pixelsize_mm2*self.measError["A_pixel"])**2
+        +(self.curToDensity(self.self.measError["I_p"]+data[2]*0))**2)
+        lumErr=np.sqrt((self.photToCandela(1)*self.measError["I_p"]+data[3]*0)**2+(data[3]*self.measError["r"]/)**2)
+        photErr=self.measError["I_p"]
+        #wip
     
     def processFileName(self, option=".pdf"):
         if self.filename is None:
@@ -421,7 +432,7 @@ class OLEDPlot(Plot):
                     AX=self.ax2.errorbar(*data.getSplitData2D(xCol=self.xCol, yCol=self.showCol2), c="#000000", ls=self.ax2ls, label="Ideal "+self.showColLabel[self.showCol2].lower())
             except:
                 raise
-                
+        for a in
             
                  
              
