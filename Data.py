@@ -62,6 +62,7 @@ class Data:
             data[range(0,len(data)),[yCol-1]*len(data)] = function(data[range(0,len(data)),[yCol-1]*len(data)])
         return data
     
+    
     def offsetData(self, offset):
         xdata, ydata = self.getSplitData2D()
         xdata = xdata+offset[0]
@@ -145,7 +146,7 @@ class Data:
         for n in range(0,len(colVec)):
             if colVec[n]>=value-tolerance:
                 return n
-        raise IndexError("No Index found, invalid limits")
+        raise IndexError("No Index found where a value is greater than {:7.1E}, invalid limits at column:".format(value)+repr(column))
     
     def getLastIndexWhereSmallerOrEq(self,column,value,tolerance=0):
         data=self.getData()
@@ -153,7 +154,7 @@ class Data:
         for n in range(1,len(colVec)):
             if colVec[-n]<=value-tolerance:
                 return -n
-        raise IndexError("No Index found, invalid limits")
+        raise IndexError("No Index found where a value is smaller than {:7.1E}, invalid limits at column:".format(value)+repr(column))
     
     def getLastIndexWhereGreaterOrEq(self,column,value,tolerance=0):
         data=self.getData()
@@ -161,7 +162,7 @@ class Data:
         for n in range(1,len(colVec)):
             if colVec[-n]>=value-tolerance:
                 return -n
-        raise IndexError("No Index found, invalid limits")
+        raise IndexError("No Index found where a value is greater than {:7.1E}, invalid limits at column:".format(value)+repr(column))
     
     def getFirstIndexWhereSmallerOrEq(self,column,value,tolerance=0):
         data=self.getData()
@@ -169,7 +170,7 @@ class Data:
         for n in range(0,len(colVec)):
             if colVec[n]<=value-tolerance:
                 return n
-        raise IndexError("No Index found, invalid limits")
+        raise IndexError("No Index found where a value is greater than {:7.1E}, invalid limits at column:".format(value)+repr(column))
     
     def removeAllButEveryXthLine(self,factor):
         self.setData(self.__data[::factor])

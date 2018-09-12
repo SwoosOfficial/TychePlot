@@ -62,6 +62,10 @@ class SpectraPlot(Plot):
         return amp/(np.sqrt(2*np.pi*sigma**2))*np.exp(-((x-mu)**2/(2*sigma**2)))+amp2/(np.sqrt(2*np.pi*sigma2**2))*np.exp(-((x-mu2)**2/(2*sigma2**2)))
     
     @classmethod
+    def tripleGauss(cls, x, mu, amp, sigma, mu2, amp2, sigma2, mu3, amp3, sigma3):
+        return amp/(np.sqrt(2*np.pi*sigma**2))*np.exp(-((x-mu)**2/(2*sigma**2)))+amp2/(np.sqrt(2*np.pi*sigma2**2))*np.exp(-((x-mu2)**2/(2*sigma2**2)))+amp3/(np.sqrt(2*np.pi*sigma3**2))*np.exp(-((x-mu3)**2/(2*sigma3**2)))
+    
+    @classmethod
     def twoGaussSplines(cls, x, mu, amp, sigma, sigma2):
         return amp*np.exp(-((x-mu)**2/(2*sigma**2)))*np.heaviside(x-mu,0)+amp*np.exp(-((x-mu)**2/(2*sigma2**2)))*np.heaviside(mu-x,0)
     
@@ -72,7 +76,7 @@ class SpectraPlot(Plot):
     def __init__(self,
                  name,
                  fileList,
-                 fileFormat={"separator":";", "skiplines":82},
+                 fileFormat={"separator":";", "skiplines":75},
                  title=None,
                  validYCol=[2],
                  bgYCol=[None],
@@ -90,9 +94,15 @@ class SpectraPlot(Plot):
                  averageMedian=False,
                  errors=False,
                  xParamPos=0,
+                 rainbowMode=False,
+                 fitColors=['#1f77b4','#d62728','#2ca02c','#9467bd','#8c564b','#e377c2','#7f7f7f','#ff7f0e','#bcbd22','#17becf','#f8e520'],
                  **kwargs
                 ):
-        Plot.__init__(self, name, fileList, averageMedian=averageMedian, showColAxType=showColAxType, showColAxLim=showColAxLim, showColLabel=showColLabel, showColLabelUnit=showColLabelUnit, fileFormat=fileFormat, errors=errors, **kwargs)
+        if rainbowMode:
+            kwargs.update({"legendBool":False})
+        else:
+            kwargs.update({"legendBool":True})
+        Plot.__init__(self, name, fileList, averageMedian=averageMedian, showColAxType=showColAxType, showColAxLim=showColAxLim, showColLabel=showColLabel, showColLabelUnit=showColLabelUnit, fileFormat=fileFormat, errors=errors, fitColors=fitColors, **kwargs)
         #dyn inits
         if title is None:
             self.title=name
@@ -101,6 +111,7 @@ class SpectraPlot(Plot):
         self.bgYCol=bgYCol
         self.validYCol=validYCol
         self.xParamPos=xParamPos
+        self.rainbowMode=rainbowMode
         #self.dataList=self.importData()
    
     def processFileName(self, option=".pdf"):
@@ -133,6 +144,78 @@ class SpectraPlot(Plot):
         return self.dataList
     
     
+    def plotDoubleGauss(self,fitter,n):
+        xdata=fitter.CurveData.getSplitData2D()[0]
+        ydata1=self.gauss(xdata, *fitter.params[0:3])
+        ydata2=self.gauss(xdata, *fitter.params[3:6])
+        textPos=fitter.textPos
+        textPos2=[fitter.textPos[0],fitter.textPos[1]+0.15]
+        amp=fitter.params[1]/(np.sqrt(2*np.pi*fitter.params[2]**2))
+        amp2=fitter.params[1+3]/(np.sqrt(2*np.pi*fitter.params[2+3]**2))
+        if amp > amp2:
+            tp1=textPos2
+            tp2=textPos
+        else:
+            tp1=textPos
+            tp2=textPos2
+        self.ax.errorbar(xdata, ydata1, c=self.fitColors[n+1], ls=self.fitLs, label="Partial mono-Gaussian fit", alpha=self.fitAlpha)
+        se="Emission at \n{:3.0f}\\,nm / {:3.2f}\\,eV".format(np.round(self.convFac/fitter.params[self.xParamPos],decimals=0),np.round(fitter.params[self.xParamPos],decimals=2))
+        self.ax.annotate(s=se, size=self.customFontsize[2], xy=(fitter.params[self.xParamPos],np.amax(ydata1)-0.1*np.amax(ydata1)), xytext=tp1, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n+1], edgecolor=self.fitColors[n+1], linewidth=mpl.rcParams["lines.linewidth"]))
+        self.ax.errorbar(xdata, ydata2, c=self.fitColors[n+2], ls=self.fitLs, label="Partial mono-Gaussian fit", alpha=self.fitAlpha)
+        se2="Emission at \n{:3.0f}\\,nm / {:3.2f}\\,eV".format(np.round(self.convFac/fitter.params[self.xParamPos+3],decimals=0),np.round(fitter.params[self.xParamPos+3],decimals=2))
+        self.ax.annotate(s=se2, size=self.customFontsize[2], xy=(fitter.params[self.xParamPos+3],np.amax(ydata2)-0.1*np.amax(ydata2)), xytext=tp2, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n+2], edgecolor=self.fitColors[n+2], linewidth=mpl.rcParams["lines.linewidth"]))
+        
+    def plotTripleGauss(self,fitter,n):
+        xdata=fitter.CurveData.getSplitData2D()[0]
+        ydata1=self.gauss(xdata, *fitter.params[0:3])
+        ydata2=self.gauss(xdata, *fitter.params[3:6])
+        ydata3=self.gauss(xdata, *fitter.params[6:9])
+        textPos=fitter.textPos
+        textPos2=[fitter.textPos[0],fitter.textPos[1]+0.15]
+        textPos3=[fitter.textPos[0],fitter.textPos[1]+0.3]
+        amp=fitter.params[1]/(np.sqrt(2*np.pi*fitter.params[2]**2))
+        amp2=fitter.params[1+3]/(np.sqrt(2*np.pi*fitter.params[2+3]**2))
+        amp3=fitter.params[1+6]/(np.sqrt(2*np.pi*fitter.params[2+6]**2))
+        if amp > amp2:
+            if amp > amp3:
+                tp1=textPos3
+                if amp2 > amp3:
+                    tp2=textPos2
+                    tp3=textPos
+                else:
+                    tp2=textPos
+                    tp3=textPos2
+            else:
+                tp3=textPos3
+                tp1=textPos2
+                tp2=textPos
+                
+        else:
+            if amp2 > amp3:
+                tp2=textPos3
+                if amp > amp3:
+                    tp1=textPos2
+                    tp3=textPos
+                else:
+                    tp3=textPos2
+                    tp1=textPos
+            else:
+                tp3=textPos3
+                tp2=textPos2
+                tp1=textPos
+        #fit1
+        self.ax.errorbar(xdata, ydata1, c=self.fitColors[n+1], ls=self.fitLs, label="Partial mono-Gaussian fit", alpha=self.fitAlpha)
+        se="Emission at \n{:3.0f}\\,nm / {:3.2f}\\,eV".format(np.round(self.convFac/fitter.params[self.xParamPos],decimals=0),np.round(fitter.params[self.xParamPos],decimals=2))
+        self.ax.annotate(s=se, size=self.customFontsize[2], xy=(fitter.params[self.xParamPos],np.amax(ydata1)-0.1*np.amax(ydata1)), xytext=tp1, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n+1], edgecolor=self.fitColors[n+1], linewidth=mpl.rcParams["lines.linewidth"]))
+        #fit2
+        self.ax.errorbar(xdata, ydata2, c=self.fitColors[n+2], ls=self.fitLs, label="Partial mono-Gaussian fit", alpha=self.fitAlpha)
+        se2="Emission at \n{:3.0f}\\,nm / {:3.2f}\\,eV".format(np.round(self.convFac/fitter.params[self.xParamPos+3],decimals=0),np.round(fitter.params[self.xParamPos+3],decimals=2))
+        self.ax.annotate(s=se2, size=self.customFontsize[2], xy=(fitter.params[self.xParamPos+3],np.amax(ydata2)-0.1*np.amax(ydata2)), xytext=tp2, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n+2], edgecolor=self.fitColors[n+2], linewidth=mpl.rcParams["lines.linewidth"]))
+        #fit3
+        self.ax.errorbar(xdata, ydata3, c=self.fitColors[n+3], ls=self.fitLs, label="Partial mono-Gaussian fit", alpha=self.fitAlpha)
+        se3="Emission at \n{:3.0f}\\,nm / {:3.2f}\\,eV".format(np.round(self.convFac/fitter.params[self.xParamPos+6],decimals=0),np.round(fitter.params[self.xParamPos+6],decimals=2))
+        self.ax.annotate(s=se3, size=self.customFontsize[2], xy=(fitter.params[self.xParamPos+6],np.amax(ydata3)-0.1*np.amax(ydata3)), xytext=tp3, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n+3], edgecolor=self.fitColors[n+3], linewidth=mpl.rcParams["lines.linewidth"]))
+    
     def rect(self,x,y,w,h,c):
         polygon = matplotlib.pyplot.Rectangle((x,y),w,h,color=c)
         self.ax.add_patch(polygon)
@@ -142,15 +225,25 @@ class SpectraPlot(Plot):
         dx = X[1]-X[0]
         S  = 380 
         N  = 675
-        h= 0.01
-        for n, (x,y) in enumerate(zip(X,Y)):
-            if (x>N):
-                color= cmap(0.9999)
-            elif (x<S):
-                color= cmap(0)
-            else:
-                color = cmap((x-S)/(N-S))
-            self.rect(x,-0.035,dx,h,color)
+        h = 0.01
+        if not self.rainbowMode:
+            for n, (x,y) in enumerate(zip(X,Y)):
+                if (x>N):
+                    color= cmap(0.9999)
+                elif (x<S):
+                    color= cmap(0)
+                else:
+                    color = cmap(min((x-S)/(N-S),0.9999))
+                self.rect(x,-0.035,dx,h,color)
+        else:
+            for n, (x,y) in enumerate(zip(X,Y)):
+                if (x>N):
+                    color= cmap(0.96)
+                elif (x<S):
+                    color= cmap(0)
+                else:
+                    color = cmap(min((x-S)/(N-S),0.96))
+                self.rect(x,0,dx,y,color)
     
     def xColTicksToXCol2Ticks(self, ticks):
         if self.xCol==1 and self.xCol2==4:
@@ -168,25 +261,40 @@ class SpectraPlot(Plot):
         self.dataList=[[Data(fileToNpArray(pixel, **self.fileFormat)[0]) for pixel in device] for device in self.fileList]
         return self.dataList
     
+    
+    
     def afterPlot(self):
         ax=self.ax
         if self.xCol==1:
             self.rainbow_fill(*self.expectData[0].getSplitData2D())
-        try:
-            for n in range(0,len(self.expectData)):
-                if self.fitterList[n] is not None:
-                    if type(self.fitterList[n]) is list:
-                        for fitter in self.fitterList[n]:
-                            if fitter.desc != None:
-                                if self.xCol!=4:
-                                    se=fitter.desc.format(np.round(fitter.params[self.xParamPos]))
-                                else:
-                                    try:
-                                           se=fitter.desc.format(np.round(self.convFac/fitter.params[self.xParamPos],decimals=0),np.round(fitter.params[self.xParamPos],decimals=1))
-                                    except IndexError:
-                                        se=fitter.desc.format(np.round(self.convFac/fitter.params[self.xParamPos]))
-                                ax.annotate(s=se, size=self.customFontsize[2], xy=(fitter.params[self.xParamPos],np.amax(fitter.CurveData.getSplitData2D()[1])-0.1*np.amax(fitter.CurveData.getSplitData2D()[1])), xytext=fitter.textPos, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n], edgecolor=self.fitColors[n], linewidth=mpl.rcParams["lines.linewidth"]))
-                    elif self.fitterList[n].desc != None:
+            if self.rainbowMode:
+                ax.get_lines()[0].set_alpha(0)
+        #try:
+        for n in range(0,len(self.expectData)):
+            if self.fitterList[n] is not None:
+                if type(self.fitterList[n]) is list:
+                    for fitter in self.fitterList[n]:
+                        if fitter.function == self.doubleGauss:
+                            self.plotDoubleGauss(fitter,n)
+                        if fitter.function == self.tripleGauss:
+                            self.plotTripleGauss(fitter,n)
+                        #annotation
+                        if fitter.desc != None:
+                            if self.xCol!=4:
+                                se=fitter.desc.format(np.round(fitter.params[self.xParamPos]))
+                            else:
+                                try:
+                                       se=fitter.desc.format(np.round(self.convFac/fitter.params[self.xParamPos],decimals=0),np.round(fitter.params[self.xParamPos],decimals=1))
+                                except IndexError:
+                                    se=fitter.desc.format(np.round(self.convFac/fitter.params[self.xParamPos]))
+                            ax.annotate(s=se, size=self.customFontsize[2], xy=(fitter.params[self.xParamPos],np.amax(fitter.CurveData.getSplitData2D()[1])-0.1*np.amax(fitter.CurveData.getSplitData2D()[1])), xytext=fitter.textPos, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n], edgecolor=self.fitColors[n], linewidth=mpl.rcParams["lines.linewidth"]))
+                else:
+                    if self.fitterList[n].function == self.doubleGauss:
+                        self.plotDoubleGauss(self.fitterList[n],n)
+                    if self.fitterList[n].function == self.tripleGauss:
+                        self.plotTripleGauss(self.fitterList[n],n)
+                    #annotation
+                    if self.fitterList[n].desc != None:
                         fitter=self.fitterList[n]
                         if self.xCol!=4:
                             se=fitter.desc.format(np.round(fitter.params[self.xParamPos]))
@@ -199,8 +307,8 @@ class SpectraPlot(Plot):
                         xsy=(fitter.params[self.xParamPos],np.amax(fitter.CurveData.getSplitData2D()[1])-0.1*np.amax(fitter.CurveData.getSplitData2D()[1]))
                         arprps=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n], edgecolor=self.fitColors[n], linewidth=mpl.rcParams["lines.linewidth"])
                         ax.annotate(s=se, size=sze, xy=xsy, xytext=fitter.textPos, arrowprops=arprps)
-        except Exception:
-            raise
+        #except Exception as e:
+            #warnings.warn(str(e))
                 
 
 

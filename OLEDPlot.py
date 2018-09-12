@@ -77,9 +77,9 @@ class OLEDPlot(Plot):
         return cand/(dens*10)
     
     @classmethod
-    def doubleLogSlope(cls, volt, dens):
+    def doubleLogSlope(cls, volt, dens, V_bi=0):
         oldDict=np.seterr(all="ignore")
-        V=np.log(volt)
+        V=np.log(volt-V_bi)
         j=np.log(dens)
         deriv=np.gradient(j,V)
         np.seterr(**oldDict)
@@ -133,7 +133,10 @@ class OLEDPlot(Plot):
                  maxEqe=5,
                  darkCurrent=None,
                  darkCurrentValidPoints=(1,20),
-                 measErrors={"I_p":5*10**-12,"r":5*10**-3,"s_max":0.01608,"A_pixel":10**-7}
+                 measErrors={"I_p":5*10**-12,"r":5*10**-3,"s_max":0.01608,"A_pixel":10**-7},
+                 V_bi=0,
+                 curIdeal=False,
+                 lumThresh=0.1,
                  **kwargs
                 ):
         Plot.__init__(self, name, fileList, averageMedian=averageMedian, showColAxType=showColAxType, showColAxLim=showColAxLim, showColLabel=showColLabel, showColLabelUnit=showColLabelUnit, fileFormat=fileFormat, legLoc=legLoc, **kwargs)
@@ -168,6 +171,9 @@ class OLEDPlot(Plot):
         self.darkCurrent=darkCurrent
         self.darkCurrentValidPoints=darkCurrentValidPoints
         self.measErrors=measErrors
+        self.V_bi=V_bi
+        self.curIdeal=curIdeal
+        self.lumThresh=lumThresh
         #initmethods
         self.exportDataList=copy.deepcopy(self.dataList)
         self.spectralDataList=self.spectraDataImport()[0]
@@ -209,16 +215,20 @@ class OLEDPlot(Plot):
     
     def remDarkCurr(self,phot):
         if self.darkCurrent is None:
-            return phot-np.average(phot[self.darkCurrentValidPoints[0]:self.darkCurrentValidPoints[1]])
+            a= phot-np.average(phot[self.darkCurrentValidPoints[0]:self.darkCurrentValidPoints[1]])
         else:
-            return phot-self.darkCurrent
+            a= phot-self.darkCurrent
+        return np.maximum(a*0+10**-14,np.absolute(a))
     
     def radToCandela(self, rad, spectralData):
         summe=np.sum([self.diodeData.getSplitData2D()[1][a]*spectralData.getSplitData2D()[1][a] for a in range(0,len(self.diodeData.getSplitData2D()[1]))])
         return rad*OLEDPlot.K_m*summe
     
     def curToDensity(self,cur):
-        return cur*10**5/self.pixelsize_mm2; #converts A to mA/cm² A/m²--> 
+        return cur*10**5/self.pixelsize_mm2; #converts A to mA/cm² 
+    
+    def densToCur(self,dens):
+        return dens*self.pixelsize_mm2/10**5; #converts mA/cm² to A
     
     def photToCandela(self,phot):
         return phot*4.3*self.pixelsize_mm2**(-1)*10**10 #converts A to cd/m² Correction: pixelsize_mm2
@@ -243,12 +253,22 @@ class OLEDPlot(Plot):
         rad=(self.maxEqe*dens*10*OLEDPlot.h*OLEDPlot.c*sum2)/(np.pi*OLEDPlot.e*100)
         return self.candToPhotoCurr(self.radToCandela(rad, spectralData))
     
+    def theoLimitCur(self, cand, spectralData):
+        sum2=np.sum([spectralData.getSplitData2D()[1][a]/spectralData.getSplitData2D()[0][a] for a in range(0,len(spectralData.getSplitData2D()[1]))])
+        rad=self.candToRadiance(cand, spectralData)
+        for n in range(0,len(cand)):
+            if cand[n]>=self.lumThresh:
+                break
+        rad=rad[n:]
+        dens=(np.pi*rad*OLEDPlot.e)/(self.maxEqe*10*OLEDPlot.h*OLEDPlot.c*sum2)*100
+        return self.densToCur(dens)
+    
     def addMeasError(self,data):
         #Volterr
         currErr=np.absolute(self.measError["I_p"]+data[1]*0)
         densErr=np.sqrt((self.curToDensity(data[2])/self.pixelsize_mm2*self.measError["A_pixel"])**2
         +(self.curToDensity(self.self.measError["I_p"]+data[2]*0))**2)
-        lumErr=np.sqrt((self.photToCandela(1)*self.measError["I_p"]+data[3]*0)**2+(data[3]*self.measError["r"]/)**2)
+        lumErr=np.sqrt((self.photToCandela(1)*self.measError["I_p"]+data[3]*0)**2+(data[3]*self.measError["r"]/1)**2)
         photErr=self.measError["I_p"]
         #wip
     
@@ -311,16 +331,19 @@ class OLEDPlot(Plot):
                     subDataList.append(lumEffic) #Luminous_efficacy
                     eqe=self.calcEQE(dens,rad,spectralData)
                     subDataList.append(eqe) #EQE8
-                    power=self.doubleLogSlope(np.abs(volt),np.abs(dens))
+                    power=self.doubleLogSlope(np.abs(volt-self.V_bi),np.abs(dens))
                     subDataList.append(power) #power9
                     data.setData(Data.mergeData(subDataList))
                     if self.xLim is not None:
-                        if self.limCol is None:
-                            nList.append(data.getFirstIndexWhereGreaterOrEq(self.xCol,self.xLim[0]))
-                            mList.append(data.getLastIndexWhereSmallerOrEq(self.xCol,self.xLim[1]))
-                        else:
-                            nList.append(data.getFirstIndexWhereGreaterOrEq(self.limCol,self.xLim[0]))
-                            mList.append(data.getLastIndexWhereSmallerOrEq(self.limCol,self.xLim[1]))
+                        try:
+                            if self.limCol is None:
+                                nList.append(data.getFirstIndexWhereGreaterOrEq(self.xCol,self.xLim[0]))
+                                mList.append(data.getLastIndexWhereSmallerOrEq(self.xCol,self.xLim[1]))
+                            else:
+                                nList.append(data.getFirstIndexWhereGreaterOrEq(self.limCol,self.xLim[0]))
+                                mList.append(data.getLastIndexWhereSmallerOrEq(self.limCol,self.xLim[1]))
+                        except IndexError as ie:#
+                            warnings.warn("Invalid Limits at column "+str(ie)[-1:]+" with value "+str(ie)[45:52])
                 try:
                     n=max(nList)
                     m=min(mList)
@@ -353,7 +376,8 @@ class OLEDPlot(Plot):
                     data.setData(result)
                 subDataList=[]
                 #print(data.getData())
-                subDataList.append(data.getSplitData2D(xCol=1, yCol=2)[0])
+                volt=data.getSplitData2D(xCol=1, yCol=2)[0]
+                subDataList.append(volt)
                 subDataList.append(data.getSplitData2D(xCol=1, yCol=2)[1]) #Current [2]  
                 dens=Data.processDataAndReturnArray(data, self.curToDensity)[:,1]
                 subDataList.append(dens) #Current_density [3]
@@ -367,6 +391,8 @@ class OLEDPlot(Plot):
                 subDataList.append(lumEffic) #Luminous_efficacy
                 eqe=self.calcEQE(dens,rad,spectralData)
                 subDataList.append(eqe) #EQE8
+                power=self.doubleLogSlope(np.abs(volt-self.V_bi),np.abs(dens))
+                subDataList.append(power) #power9
                 data.setData(Data.mergeData(subDataList))
                 if self.xLim is not None:
                     nList.append(data.getFirstIndexWhereGreaterOrEq(self.xCol,self.xLim[0]))
@@ -403,14 +429,23 @@ class OLEDPlot(Plot):
             expVolt=self.expectData[idealDevice].getData()[:,0]
             expCurr=self.expectData[idealDevice].getData()[:,1]
             expDens=self.expectData[idealDevice].getData()[:,2]
-            idLum=self.theoLimitPhot(expVolt, expDens,spectralData)
-            idPhot=idLum
-            data=Data(Data.mergeData((expVolt,expCurr,idPhot)))
+            if not self.curIdeal:
+                idLum=self.theoLimitPhot(expVolt, expDens,spectralData)
+                idPhot=idLum
+                data=Data(Data.mergeData((expVolt,expCurr,idPhot)))
+            else:
+                expLum=self.expectData[idealDevice].getData()[:,3]
+                idCur=self.theoLimitCur(expLum, spectralData)
+                expPhot=self.candToPhotoCurr(expLum)
+                expPhot=expLum[-len(idCur):]
+                expVolt=expVolt[-len(idCur):]
+                data=Data(Data.mergeData((expVolt,idCur,expPhot)))
             #data.processData(OLEDPlot.remDarkCurr, yCol=3)
             data.limitData(xLim=self.xLimOrig, xCol=self.xColOrig)
             data.processData(OLEDPlot.absolute, yCol=2)
             subDataList=[]
-            subDataList.append(data.getSplitData2D(yCol=2)[0])
+            volt=data.getSplitData2D(xCol=1,yCol=2)[0]
+            subDataList.append(volt)
             subDataList.append(data.getSplitData2D(yCol=2)[1]) #Current [2]  
             dens=Data.processDataAndReturnArray(data, self.curToDensity)[:,1]
             subDataList.append(dens) #Current_density [3]
@@ -423,16 +458,24 @@ class OLEDPlot(Plot):
             subDataList.append(lumEffic) #Luminous_efficacy
             eqe=self.calcEQE(dens,subDataList[4],spectralData)
             subDataList.append(eqe) #EQE8
+            power=self.doubleLogSlope(np.abs(volt-self.V_bi),np.abs(dens))
+            subDataList.append(power) #power9
             data.setData(Data.mergeData(subDataList))
             self.idealData=data
             try:
-                if self.showCol not in [0,1,2,3]:
-                    AX=self.ax.errorbar(*data.getSplitData2D(xCol=self.xCol, yCol=self.showCol), c="#000000", ls=self.ls, label="Ideal")
-                if self.showCol2 not in [0,1,2,3]:
-                    AX=self.ax2.errorbar(*data.getSplitData2D(xCol=self.xCol, yCol=self.showCol2), c="#000000", ls=self.ax2ls, label="Ideal "+self.showColLabel[self.showCol2].lower())
+                if not self.curIdeal:
+                    if self.showCol not in [0,1,2,3,8,9]:
+                        AX=self.ax.errorbar(*data.getSplitData2D(xCol=self.xCol, yCol=self.showCol), c="#000000", ls=self.ls, label=self.showColLabel[self.showCol]+" at a theo. EQE of "+str(self.maxEqe)+"\\,\\%")
+                    if self.showCol2 not in [0,1,2,3,8,9]:
+                        AX=self.ax2.errorbar(*data.getSplitData2D(xCol=self.xCol, yCol=self.showCol2), c="#000000", ls=self.ax2ls, label=self.showColLabel[self.showCol2]+" at a theo. EQE of "+str(self.maxEqe)+"\\,\\%")
+                else:
+                    if self.showCol not in [0,1,4,5,6,7,8]:
+                        AX=self.ax.errorbar(*data.getSplitData2D(xCol=self.xCol, yCol=self.showCol), c="#000000", ls=self.ls, label=self.showColLabel[self.showCol]+" at a theo. EQE of "+str(self.maxEqe)+"\\,\\%")
+                    if self.showCol2 not in [0,1,4,5,6,7,8]:
+                        AX=self.ax2.errorbar(*data.getSplitData2D(xCol=self.xCol, yCol=self.showCol2), c="#000000", ls=self.ax2ls, label=self.showColLabel[self.showCol2]+" at a theo. EQE of "+str(self.maxEqe)+"\\,\\%")
             except:
                 raise
-        for a in
+        #for a in
             
                  
              

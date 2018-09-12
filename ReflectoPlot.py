@@ -141,8 +141,8 @@ class ReflectoPlot(Plot):
             string+=self.fill+"scaledWith{:03.0f}Pct".format(self.scaleX*100)
         return string+option
     
-    def processData(self):
-        return self.dataList
+    #def processData(self):
+        #return self.dataList
     
     
     def rect(self,x,y,w,h,c):

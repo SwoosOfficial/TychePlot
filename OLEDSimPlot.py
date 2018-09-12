@@ -220,6 +220,5 @@ class Stack:
         ax.set_ylim(plot.x_min, plot.V+1)
         ax.grid(which="major",ls=":",alpha=0.25, axis="y")
         plt.tight_layout()
-        plt.savefig(plot.name+".pdf")
-        plt.savefig(plot.name+".pgf")
-        return [plot,plot.name+".pdf"] #filename
+        plot.saveFig()
+        return [plot,plot.processFileName(option=".pdf")] #filename

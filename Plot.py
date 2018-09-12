@@ -6,7 +6,7 @@
 texPreamble=[r"\usepackage{amsmath}",
              r"\usepackage{fontspec}",
              r"\usepackage[no-sscript]{xltxtra}",
-             r"\setmainfont{Minion-Pro_Regular.ttf}[BoldFont = Minion-Pro-Bold.ttf, ItalicFont = Minion-Pro-Italic.ttf, BoldItalicFont = Minion-Pro-Bold-Italic.ttf]"]
+             r"\IfFontExistsTF{Minion Pro}{\setmainfont{Minion Pro}}{}"]
 pgfSys="xelatex"
 
 import matplotlib as mpl
@@ -211,7 +211,8 @@ class Plot():
                  xAxisTicks=None,
                  legendBool=True,
                  titleFontsize="x-large",
-                 customLabelAx2=None
+                 customLabelAx2=None,
+                 doNotFit=False
                 ):
         #static inits
         self.ax=None
@@ -246,11 +247,11 @@ class Plot():
                         self.showColAxLim[self.showCol]=yLim[0]
                         self.showColAxLim[self.showCol2]=yLim[1]
                     else:
-                        Exception("yLim is or wrong format")
+                        Exception("yLim is of wrong format")
                 except TypeError:
                     self.showColAxLim[self.showCol]=yLim
             else:
-                raise Exception("yLim is or wrong format")
+                raise Exception("yLim is of wrong format")
         
         self.scaleX=scaleX
         if scaleX < 0.6 and customFontsize is None:
@@ -334,6 +335,7 @@ class Plot():
         self.titleFontsize=titleFontsize
         self.limCol=limCol
         self.customLabelAx2=customLabelAx2
+        self.doNotFit=doNotFit
         #inits
         self.__initFileList(fileList, errors, labels, show, fitLabels)
         self.dataList=self.__importData()
@@ -441,18 +443,20 @@ class Plot():
                 if type(fitter) is list:
                     for subFitter in fitter:
                         subFitter.limitData(xLim=subFitter.dataForFitXLim, yLim=subFitter.dataForFitYLim, feature=1)
-                        try:
-                            subFitter.fit(xCol=self.xCol, yCol=self.showCol, p0=subFitter.params)
-                        except RuntimeError as err:
-                            raise FitException(self.fitterList.index(fitter),fitList[(self.fitterList.index(fitter))],err)
+                        if not self.doNotFit:
+                            try:
+                                subFitter.fit(xCol=self.xCol, yCol=self.showCol, p0=subFitter.params)
+                            except RuntimeError as err:
+                                raise FitException(self.fitterList.index(fitter),fitList[(self.fitterList.index(fitter))],err)
                         subFitter.doFitCurveData(xCol=self.xCol)
                         subFitter.limitData(xLim=subFitter.curveDataXLim, feature=2)
                 else:
                     fitter.limitData(xLim=fitter.dataForFitXLim, yLim=fitter.dataForFitYLim, feature=1)
-                    try:
-                        fitter.fit(xCol=self.xCol, yCol=self.showCol, p0=fitter.params)
-                    except RuntimeError as err:
-                        raise FitException(self.fitterList.index(fitter),self.fitList[(self.fitterList.index(fitter))],err,fitter.params)
+                    if not self.doNotFit:
+                        try:
+                            fitter.fit(xCol=self.xCol, yCol=self.showCol, p0=fitter.params)
+                        except RuntimeError as err:
+                            raise FitException(self.fitterList.index(fitter),self.fitList[(self.fitterList.index(fitter))],err,fitter.params)
                     
                     fitter.doFitCurveData(xCol=self.xCol)
                     fitter.limitData(xLim=fitter.curveDataXLim, feature=2)
@@ -526,6 +530,7 @@ class Plot():
             for deviceData in self.dataList:
                 for data in deviceData:
                     data.limitData(xLim=self.xLimOrig)
+                    #print("limiting data to: "+str(self.xLimOrig))
             self.dataProcessed=True
         return self.dataList
     
@@ -577,6 +582,7 @@ class Plot():
         devDataList=[np.sqrt(np.sum([np.square(np.subtract(data,tempData.getData())) for tempData in deviceData],axis=0)/len(deviceData)) for data, deviceData in zip(avgDataList, dataList)]
         return avgDataList, devDataList
     
+    #@functools.lru_cache()
     def calcLogErr(self, expectData, deviaData):
         if not self.overrideErrorTypes:
             if self.showColAxType[self.showCol] == "log":
@@ -596,8 +602,8 @@ class Plot():
         symErr=[(np.absolute(expect.getData()-devia.getData())) for devia,expect in zip(deviaData, expectData)]
         minErr=[np.absolute(expect.getData()-mind) for devia,expect,mind in zip(deviaData, expectData, minData)]
         maxErr=[np.absolute(expect.getData()-maxi) for devia,expect,maxi in zip(deviaData, expectData, maxData)]
-        logErrMin=[np.minimum(err, mind) for err,mind in zip(symErr,minErr)]
-        logErrMax=[np.minimum(err, maxi) for err,maxi in zip(symErr,maxErr)]
+        logErrMin=[np.nan_to_num(np.minimum(err, mind)) for err,mind in zip(symErr,minErr)]
+        logErrMax=[np.nan_to_num(np.minimum(err, maxi)) for err,maxi in zip(symErr,maxErr)]
         self.logErr=[logErrMin,logErrMax]
         return self.logErr
     
@@ -750,10 +756,10 @@ class Plot():
         ax= self.ax
         ax.set_xlabel(self.xLabel)
         if self.showColAxType[self.xCol] == "log":
-            ax.set_xscale("log", basex=10, subsy=[2,3,4,5,6,7,8,9])
+            ax.set_xscale("log")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
         ax.set_ylabel(self.axYLabel)
         if self.showColAxType[self.showCol] == "log":
-            ax.set_yscale("log", basex=10, subsy=[2,3,4,5,6,7,8,9])
+            ax.set_yscale("log")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
         if self.axYLim is not None:
             ax.set_ylim(*self.axYLim)
         if self.axXLim is not None:
@@ -765,7 +771,7 @@ class Plot():
                 ax2=self.ax2
                 ax2.set_ylabel(self.ax2YLabel)
                 if self.showColAxType[self.showCol2] == "log":
-                    ax2.set_yscale("log", basex=10, subsy=[2,3,4,5,6,7,8,9])
+                    ax2.set_yscale("log")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
                 if self.ax2YLim is not None:
                     ax2.set_ylim(*self.ax2YLim)
         self.dataList=self.processData()
@@ -780,7 +786,7 @@ class Plot():
             axX2.set_xlim(ax.get_xlim())
             axX2.set_xlabel(self.ax2XLabel)
             if self.showColAxType[self.xCol2] == "log":
-                axX2.set_xscale("log", basex=10, subsy=[2,3,4,5,6,7,8,9])
+                axX2.set_xscale("log")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
             if self.ax2XLim is not None:
                 ax2.set_xlim(*self.ax2XLim)
         exec(self.injCode)
