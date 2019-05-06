@@ -113,6 +113,26 @@ class Data:
             raise IndexError("Empty data, invalid limits")
         self.setData(data)
         
+    def intersectData(self, intervals, column=None, keepLimits=True, invert_intervals=False):
+        data = self.getData()
+        if column is None:
+            column = self.xCol
+        intersec_data=[]
+        for interval in intervals:
+            if invert_intervals:
+                interval=(interval[1],interval[0])
+            rem_data=[]
+            if keepLimits:
+                if len(interval) == 2:
+                    rem_data=data[(data[:,column-1]>=interval[0]) & (data[:,column-1]<=interval[1])]
+            else:
+                if len(xLim) == 2:
+                    rem_data=data[(data[:,column-1]>interval[0]) & (data[:,column-1]<inteval[1])]
+            intersec_data.append(rem_data)
+        intersec_data_array=np.vstack(intersec_data)
+        self.setData(intersec_data_array)
+    
+    
         
     def removeData(self, rangeZ, column, keepLimits=True):
         data = self.getData()
@@ -177,5 +197,11 @@ class Data:
         
     def getDataWithOnlyEveryXthLine(self, factor):
         return Data(self.__data[::factor])
+    
+    def removeDoubles(self, xCol=0):
+        if xCol==0:
+            xCol=self.xCol
+        tup=np.unique(self.__data[:,xCol-1], return_index=True, axis=0)
+        self.setData(self.__data[tup[1]])
 
 

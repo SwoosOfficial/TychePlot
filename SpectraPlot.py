@@ -96,12 +96,11 @@ class SpectraPlot(Plot):
                  xParamPos=0,
                  rainbowMode=False,
                  fitColors=['#1f77b4','#d62728','#2ca02c','#9467bd','#8c564b','#e377c2','#7f7f7f','#ff7f0e','#bcbd22','#17becf','#f8e520'],
+                 bgfile=None,
                  **kwargs
                 ):
         if rainbowMode:
             kwargs.update({"legendBool":False})
-        else:
-            kwargs.update({"legendBool":True})
         Plot.__init__(self, name, fileList, averageMedian=averageMedian, showColAxType=showColAxType, showColAxLim=showColAxLim, showColLabel=showColLabel, showColLabelUnit=showColLabelUnit, fileFormat=fileFormat, errors=errors, fitColors=fitColors, **kwargs)
         #dyn inits
         if title is None:
@@ -112,6 +111,7 @@ class SpectraPlot(Plot):
         self.validYCol=validYCol
         self.xParamPos=xParamPos
         self.rainbowMode=rainbowMode
+        self.bgfile=bgfile
         #self.dataList=self.importData()
    
     def processFileName(self, option=".pdf"):
@@ -125,22 +125,42 @@ class SpectraPlot(Plot):
     
     def processData(self):
         if not self.dataProcessed:
-            for device in self.dataList:
-                for data, yCol, bg in zip(device,self.validYCol, self.bgYCol):
-                    try:
-                        energy,specRad=self.wavelengthToEV(data.getSplitData2D(xCol=1, yCol=yCol)[0], data.getSplitData2D(xCol=1,yCol=yCol)[1]- data.getSplitData2D(xCol=1,yCol=bg)[1])
-                        data.setData(Data.mergeData((data.getSplitData2D(xCol=1, yCol=yCol)[0], data.getSplitData2D(xCol=1,yCol=yCol)[1]- data.getSplitData2D(xCol=1,yCol=bg)[1],data.getSplitData2D(xCol=1,yCol=yCol)[1]- data.getSplitData2D(xCol=1,yCol=bg)[1],energy,specRad,specRad)))
-                    except (IndexError,TypeError):
-                        energy,specRad=self.wavelengthToEV(*data.getSplitData2D(xCol=1, yCol=yCol))
-                        data.setData(Data.mergeData((data.getSplitData2D(xCol=1, yCol=yCol)[0],data.getSplitData2D(xCol=1,yCol=yCol)[1],data.getSplitData2D(xCol=1,yCol=yCol)[1],energy,specRad,specRad)))
-                    data.processData(self.noNegatives, yCol=2)
-                    data.processData(self.noNegatives, yCol=3)
-                    data.processData(self.noNegatives, yCol=5)
-                    data.processData(self.noNegatives, yCol=6)
-                    data.processData(self.normalize, yCol=2)
-                    data.processData(self.normalize, yCol=5)
-                    data.limitData(xLim=self.xLimOrig)
-            self.dataProcessed=True
+            if self.bgfile is None:
+                for device in self.dataList:
+                    for data, yCol, bg in zip(device,self.validYCol, self.bgYCol):
+                        try:
+                            energy,specRad=self.wavelengthToEV(data.getSplitData2D(xCol=1, yCol=yCol)[0], data.getSplitData2D(xCol=1,yCol=yCol)[1]- data.getSplitData2D(xCol=1,yCol=bg)[1])
+                            data.setData(Data.mergeData((data.getSplitData2D(xCol=1, yCol=yCol)[0], data.getSplitData2D(xCol=1,yCol=yCol)[1]- data.getSplitData2D(xCol=1,yCol=bg)[1],data.getSplitData2D(xCol=1,yCol=yCol)[1]- data.getSplitData2D(xCol=1,yCol=bg)[1],energy,specRad,specRad)))
+                        except (IndexError,TypeError):
+                            energy,specRad=self.wavelengthToEV(*data.getSplitData2D(xCol=1, yCol=yCol))
+                            data.setData(Data.mergeData((data.getSplitData2D(xCol=1, yCol=yCol)[0],data.getSplitData2D(xCol=1,yCol=yCol)[1],data.getSplitData2D(xCol=1,yCol=yCol)[1],energy,specRad,specRad)))
+                        data.processData(self.noNegatives, yCol=2)
+                        data.processData(self.noNegatives, yCol=3)
+                        data.processData(self.noNegatives, yCol=5)
+                        data.processData(self.noNegatives, yCol=6)
+                        data.processData(self.normalize, yCol=2)
+                        data.processData(self.normalize, yCol=5)
+                        data.limitData(xLim=self.xLimOrig)
+                        self.dataProcessed=True
+            else:
+                bg=fileToNpArray(self.bgfile, **self.fileFormat)[0][:,1]
+                for device in self.dataList:
+                    for data, yCol in zip(device,self.validYCol):
+                        try:
+                            energy,specRad=self.wavelengthToEV(data.getSplitData2D(xCol=1, yCol=yCol)[0], data.getSplitData2D(xCol=1,yCol=yCol)[1]- bg)
+                            data.setData(Data.mergeData((data.getSplitData2D(xCol=1, yCol=yCol)[0], data.getSplitData2D(xCol=1,yCol=yCol)[1]- bg,data.getSplitData2D(xCol=1,yCol=yCol)[1]- bg,energy,specRad,specRad)))
+                        except (IndexError,TypeError):
+                            energy,specRad=self.wavelengthToEV(*data.getSplitData2D(xCol=1, yCol=yCol))
+                            data.setData(Data.mergeData((data.getSplitData2D(xCol=1, yCol=yCol)[0],data.getSplitData2D(xCol=1,yCol=yCol)[1],data.getSplitData2D(xCol=1,yCol=yCol)[1],energy,specRad,specRad)))
+                        data.processData(self.noNegatives, yCol=2)
+                        data.processData(self.noNegatives, yCol=3)
+                        data.processData(self.noNegatives, yCol=5)
+                        data.processData(self.noNegatives, yCol=6)
+                        data.processData(self.normalize, yCol=2)
+                        data.processData(self.normalize, yCol=5)
+                        data.limitData(xLim=self.xLimOrig)
+                        self.dataProcessed=True
+                
         return self.dataList
     
     
@@ -238,12 +258,12 @@ class SpectraPlot(Plot):
         else:
             for n, (x,y) in enumerate(zip(X,Y)):
                 if (x>N):
-                    color= cmap(0.96)
+                    color= cmap(0.95)
                 elif (x<S):
                     color= cmap(0)
                 else:
-                    color = cmap(min((x-S)/(N-S),0.96))
-                self.rect(x,0,dx,y,color)
+                    color = cmap(min((x-S)/(N-S),0.95))
+                self.rect(x-dx/2,0,dx,y,color)
     
     def xColTicksToXCol2Ticks(self, ticks):
         if self.xCol==1 and self.xCol2==4:
@@ -269,6 +289,11 @@ class SpectraPlot(Plot):
             self.rainbow_fill(*self.expectData[0].getSplitData2D())
             if self.rainbowMode:
                 ax.get_lines()[0].set_alpha(0)
+            #ax.annotate(s="",xy=(503,0.5), xytext=(503-20,0.5), arrowprops=dict(arrowstyle="->", connectionstyle="arc3", shrinkA=0, shrinkB=0, linewidth=mpl.rcParams["lines.linewidth"]))
+            #ax.annotate(s="",xy=(520,0.5), xytext=(520+20,0.5), arrowprops=dict(arrowstyle="->", connectionstyle="arc3", shrinkA=0, shrinkB=0, linewidth=mpl.rcParams["lines.linewidth"]))
+            #bbox_props = dict(boxstyle="round,pad=0.3", fc="white", alpha=1, lw=0.5)
+            #ax.text(520+30,0.55,"FWHM: 85\,meV $\equiv$ 17\,nm", bbox=bbox_props, size=self.customFontsize[2])
+            #ax.annotate(s="CsPbBr\\textsubscript{3}- Emission at 511\,nm", size=self.customFontsize[2], xy=(511,0.9), xytext=(550,0.7), arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", linewidth=mpl.rcParams["lines.linewidth"]))
         #try:
         for n in range(0,len(self.expectData)):
             if self.fitterList[n] is not None:

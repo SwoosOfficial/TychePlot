@@ -112,14 +112,25 @@ class OLEDPlot(Plot):
                  showColAxType=["lin","lin","log","log","log","log","lin","lin","lin","lin"],
                  showColAxLim=[None,None,None,None,None,None,None,None,None,None],
                  showColLabel= ["","Voltage","Current","Current Density", "Luminance", "Radiance","Current Efficiency","Luminous Efficacy","EQE", "Exponent"],
+                 showColLabelUnitNoTex=["",
+                  "Voltage (V)",
+                  "Current (A)",
+                  "Current Density (mA/cm^2)",
+                  "Luminance (cd/m^2)",
+                  "Radiance (W/(sr*m^2))",
+                  "Current Efficiency (cd/A)",
+                  "Luminous Efficacy (lm/W)",
+                  "EQE (%)",
+                  "Exponent"
+                 ],
                  showColLabelUnit=["",
                   "Voltage (V)",
                   "Current (A)",
-                  "Current Density ($\\tfrac{\\mathrm{mA}}{\\mathrm{cm}^2}$)",
-                  "Luminance ($\\tfrac{\\mathrm{cd}}{\\mathrm{m}^2}$)",
-                  "Radiance ($\\tfrac{\\mathrm{W}{\\mathrm{sr}\\cdot\\mathrm{m}^2}$)",
-                  "Current Efficiency ($\\tfrac{\\mathrm{cd}}{\\mathrm{A}}$)",
-                  "Luminous Efficacy ($\\tfrac{\\mathrm{lm}}{\\mathrm{W}}$)",
+                  "Current Density ($\\tfrac{\\mathsf{mA}}{\\mathsf{cm}^\\mathsf{2}}$)",
+                  "Luminance ($\\tfrac{\\mathsf{cd}}{\\mathsf{m}^\\mathsf{2}}$)",
+                  "Radiance ($\\tfrac{\\mathsf{W}{\\mathsf{sr}\\cdot\\mathsf{m}^\\mathsf{2}}$)",
+                  "Current Efficiency ($\\tfrac{\\mathsf{cd}}{\\mathsf{A}}$)",
+                  "Luminous Efficacy ($\\tfrac{\\mathsf{lm}}{\\mathsf{W}}$)",
                   "EQE (\\%)",
                   "Exponent"
                  ],
@@ -137,9 +148,10 @@ class OLEDPlot(Plot):
                  V_bi=0,
                  curIdeal=False,
                  lumThresh=0.1,
+                 spec_bg_file=None,
                  **kwargs
                 ):
-        Plot.__init__(self, name, fileList, averageMedian=averageMedian, showColAxType=showColAxType, showColAxLim=showColAxLim, showColLabel=showColLabel, showColLabelUnit=showColLabelUnit, fileFormat=fileFormat, legLoc=legLoc, **kwargs)
+        Plot.__init__(self, name, fileList, averageMedian=averageMedian, showColAxType=showColAxType, showColAxLim=showColAxLim, showColLabel=showColLabel, showColLabelUnit=showColLabelUnit, showColLabelUnitNoTex=showColLabelUnitNoTex,fileFormat=fileFormat, legLoc=legLoc, **kwargs)
         #dyn inits
         self.pixelsize_mm2=pixelsize_mm2
         self.skipSweepBack=skipSweepBack
@@ -158,6 +170,7 @@ class OLEDPlot(Plot):
             self.spectraFiles=(spectraFile,)
         else:
             self.spectraFiles=spectraFile
+        self.spec_bg_file=spec_bg_file
         self.specBg=specBg
         self.specYCol=specYCol
         self.photodiodeFunctionFile=photodiodeFunctionFile
@@ -195,8 +208,11 @@ class OLEDPlot(Plot):
             xData=spectralData.getSplitData2D()[0]
             yData=spectralData.getSplitData2D(yCol=yCol)[1]
             try:
-                bgData=spectralData.getSplitData2D(yCol=bg)[1]
-                yDataCor=spectralData.getSplitData2D(yCol=yCol)[1]-spectralData.getSplitData2D(yCol=bg)[1]
+                if self.spec_bg_file is None:
+                    bgData=spectralData.getSplitData2D(yCol=bg)[1]
+                else:
+                    bgData=Data(fileToNpArray(spectraFile, **self.spectralDataFormat)[0]).getSplitData2D()[1]
+                yDataCor=spectralData.getSplitData2D(yCol=yCol)[1]-bgData
                 spectralData.setData(Data.mergeData((xData,yData,bgData,yDataCor)))
                 spectralData.processData(OLEDPlot.absolute, yCol=2)
                 spectralData.processData(OLEDPlot.absolute, yCol=4)
@@ -419,6 +435,10 @@ class OLEDPlot(Plot):
 
             else:
                 self.dataList=[[Data(fileToNpArray(pixel, **self.fileFormat)[0], xCol=self.xCol, yCol=self.showCol) for pixel in device] for device in self.fileList]
+            for dataSubList in self.dataList:
+                for data in dataSubList:
+                    data.removeDoubles(xCol=self.xColOrig)
+                    
         return self.dataList
     
     
@@ -566,82 +586,3 @@ class OLEDCustomFileListPlot(OLEDPlot):
         if filename is not None:
             self.filename=filename
             
-class DUMP():
-    pass
-    """   
-    def processData(self):
-        if not self.dataProcessed:
-            Voltage=OLEDPlot.Voltage
-            Current=OLEDPlot.Current
-            Current_density=OLEDPlot.Current_density
-            Luminance=OLEDPlot.Luminance
-            Radiance=OLEDPlot.Radiance
-            Current_Efficacy=OLEDPlot.Current_Efficacy
-            Luminous_Efficacy=OLEDPlot.Luminous_Efficacy
-            EQE=OLEDPlot.EQE
-            descDict={
-                        Voltage:"volt",
-                        Current:"cur",
-                        Current_density:"dens",
-                        Luminance:"lum",
-                        Radiance:"rad",
-                        Current_Efficacy:"curEffic",
-                        Luminous_Efficacy:"lumEffic",
-                        EQE:"EQE"
-                      }
-            xCol=self.xCol
-            showCol=self.showCol
-            showCol2=self.showCol2
-            for deviceData,spectralData in zip(self.dataList,self.spectralDataList):
-                nList=[]
-                mList=[]
-                for data in deviceData:
-                    data.limitData(xLim=self.xLimOrig, xCol=self.xColOrig)
-                    data.processData(OLEDPlot.remDarkCurr, yCol=3)
-                    data.processData(OLEDPlot.absolute, yCol=2)
-                    subDataDict={}
-                    if showCol in (Voltage,Luminous_Efficacy) or showCol2 in (Voltage,Luminous_Efficacy) or xCol in (Voltage,Luminous_Efficacy):
-                        subDataDict.update({"volt":data.getSplitData2D(xCol=1, yCol=2)[0]})
-                    if showCol==Current or showCol2==Current or xCol==Current:
-                        subDataDict.update({"cur":data.getSplitData2D(yCol=2)[1]}) #Current [1]
-                    if showCol==Current_density or showCol2==Current_density or showCol>=Current_Efficacy or showCol2>=Current_Efficacy or xCol==Current_density:    
-                        dens=Data.processDataAndReturnArray(data, self.curToDensity)[:,1]
-                        subDataDict.update({"dens":dens}) #Current_density [2]
-                    if showCol==Luminance or showCol2==Luminance or showCol>=Current_Efficacy or showCol2>=Current_Efficacy or xCol==Luminance:
-                        lum=Data.processDataAndReturnArray(data, self.photToCandela, yCol=3)[:,2]
-                        subDataDict.update({"lum":lum}) #Luminance [3]
-                    if showCol==Radiance or showCol2==Radiance or showCol>=Current_Efficacy or showCol2>=Current_Efficacy or xCol==Radiance:
-                        subDataDict.update({"rad":self.candToRadiance(lum, spectralData)}) #Radiance [4]
-                    if showCol==Current_Efficacy or showCol2==Current_Efficacy or xCol==Current_Efficacy:
-                        curEffic=OLEDPlot.calcCurEffic(subDataDict["dens"],subDataDict["lum"])
-                        subDataDict.update({"curEffic":curEffic})
-                    if showCol==Luminous_Efficacy or showCol2==Luminous_Efficacy or xCol==Luminous_Efficacy:
-                        lumEffic=OLEDPlot.calcLumEffic(subDataDict["volt"],subDataDict["dens"],subDataDict["lum"])
-                        subDataDict.update({"lumEffic":lumEffic})
-                    if showCol==EQE or showCol2==EQE or xCol==EQE:
-                        eqe=self.calcEQE(subDataDict["dens"],subDataDict["rad"], spectralData)
-                        subDataDict.update({"EQE":eqe})
-                    if showCol2<=0:
-                        data.setData(Data.mergeData((subDataDict[descDict[self.xCol]],subDataDict[descDict[self.showCol]])))
-                    else:
-                        data.setData(Data.mergeData((subDataDict[descDict[self.xCol]],subDataDict[descDict[self.showCol]],subDataDict[descDict[self.showCol2]])))
-                    if self.xLim is not None:
-                        nList.append(data.getFirstIndexWhereGreaterOrEq(1,self.xLim[0]))
-                        mList.append(data.getLastIndexWhereSmallerOrEq(1,self.xLim[1]))
-                try:
-                    n=max(nList)
-                    m=min(mList)
-                    for data in deviceData:
-                        if m==-1:
-                            data.setData(data.getData()[n:])
-                        else:
-                            data.setData(data.getData()[n:m+1])
-                except ValueError:
-                    pass
-            self.xCol=1
-            self.showCol=2
-            self.showCol2=3
-            self.dataProcessed=True
-        return self.dataList
-"""
-

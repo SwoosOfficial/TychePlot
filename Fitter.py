@@ -83,7 +83,18 @@ class Fitter:
             try:
                 self.CurveData.limitData(xLim=xLim, yLim=yLim)
             except IndexError:
-                self.CurveData.limitData(xLim=(xLim[1],xLim[0]), yLim=yLim)  
+                self.CurveData.limitData(xLim=(xLim[1],xLim[0]), yLim=yLim)
+        elif feature == 11:
+            if xLim[0][0]<=xLim[0][1]:
+                self.dataForFit.intersectData(xLim)
+            else:
+                self.dataForFit.intersectData(xLim, invert_intervals=True)
+        elif feature == 21:
+            if xLim[0][0]<=xLim[0][1]:
+                self.CurveData.intersectData(xLim)
+            else:
+                self.CurveData.intersectData(xLim, invert_intervals=True)
+            
         else:
             raise ValueError("No Such Feature")
     

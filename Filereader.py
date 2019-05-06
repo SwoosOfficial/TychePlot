@@ -8,7 +8,7 @@ import numpy as np
 
 # In[5]:
 
-def fileToNpArray(filename, separator=",", skiplines=1, backoffset=0, lastlines=0, exceptColumns=[], commaToPoint=False, lastlineNoNewLine=False, fileEnding=None):
+def fileToNpArray(filename, separator=",", skiplines=1, backoffset=0, lastlines=0, exceptColumns=[], commaToPoint=False, lastlineNoNewLine=False, fileEnding=None, transpose=False):
     if fileEnding is None:
         file = open(filename,"r")
     else:
@@ -51,6 +51,8 @@ def fileToNpArray(filename, separator=",", skiplines=1, backoffset=0, lastlines=
                 for a,b in zip(exceptColumns, range(0,len(exceptColumns))):
                     del n[a-b]
         fileToNpArray.array = np.asarray(preArray, dtype=np.float64)
+        if transpose:
+            fileToNpArray.array=np.transpose(fileToNpArray.array)
         #fileToNpArray.array = preArray
     except ValueError as err:
         raise Exception("Error importing file: "+ filename+": "+str(err)+" at line "+str(x+skiplines))
