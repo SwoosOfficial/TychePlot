@@ -29,3 +29,4 @@ A collection of data handling scripts for plotting scienctific graphs. Based on 
 * SpectraPlot
 * ReflectoPlot
 * ProfiloPlot
+* AngularPlot
