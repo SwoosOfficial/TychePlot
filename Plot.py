@@ -959,7 +959,7 @@ class Plot():
     
     def doPlotName(self):
         return self.doPlot()[1]
-
+    
 class ListShapeException(Exception):
     pass 
 
