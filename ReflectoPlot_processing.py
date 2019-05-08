@@ -1,9 +1,16 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+# In[ ]:
+
+
+#!/usr/bin/env python
+
+
 inputParameters={}
 inputParametersForScaled={}
-fileList=[]
+fileListRefl=[]
+fileListTrans=[]
 name=""
 optionalParameters={
     "customLims":False,
@@ -13,39 +20,26 @@ optionalParameters={
 }
 cls=None
 
-def initPlot(xCol=1, showColTup=(2,3), customInputParameters=None):
+def initPlot(xCol=1, showColTup=(2,0), xCol2=0, customInputParameters=None):
     if customInputParameters is not None:
         inputParameters.update(customInputParameters)
         inputParametersForScaled.update(customInputParameters)
     scPlot=None
-    if optionalParameters["customLims"]:
-        plot=cls(fileList,
-                               name,
-                               xCol=xCol,
-                               showColTup=showColTup,
-                               xLimOrig=optionalParameters["xOrigLims"][showColTup[0]],
-                               showColAxLim=optionalParameters["yAxisLims"], 
-                               **inputParameters)
-        if optionalParameters["scaled"]:
-            scPlot=cls(fileList,
-                                 name,
-                                 xCol=xCol,
-                                 showColTup=showColTup,
-                                 xLimOrig=optionalParameters["xOrigLims"][showColTup[0]],
-                                 showColAxLim=optionalParameters["yAxisLims"], 
-                                 **inputParametersForScaled)
-    else:
-        plot=cls(fileList,
-                               name,
-                               xCol=xCol,
-                               showColTup=showColTup,
-                               **inputParameters)
-        if scaled:
-            scPlot=cls(fileList,
-                                 name,
-                                 xCol=xCol,
-                                 showColTup=showColTup,
-                                 **inputParametersForScaled)
+    plot=ReflectoPlot(name, 
+                      fileListRefl, 
+                      fileListTrans,
+                      xCol=xCol,
+                      xCol2=xCol2,
+                      showColTup=showColTup,           
+                      **inputParameters)
+    if scaled:
+        scPlot=ReflectoPlot(name,
+                            fileListRefl, 
+                            fileListTrans,
+                            xCol=xCol,
+                            xCol2=xCol2,
+                            showColTup=showColTup,
+                            **inputParametersForScaled)
     if scPlot is None:
         return [plot]
     return [plot,scPlot]
@@ -68,16 +62,17 @@ def processPlotPair(plotpair):
     return [plot.doPlot() for plot in plotpair]
 
 
-def calc(name_local, fileList_local, desiredPlots, inputParameters_local, cls_local, inputParametersForScaled_local, optionalParameterDict=None, multithreaded=True):
+def calc(name_local, fileListRefl_local, fileListTrans_local, desiredPlots, inputParameters_local, cls_local, inputParametersForScaled_local, optionalParameterDict=None, multithreaded=True):
     global name
-    global fileList
+    global fileListRefl
+    global fileListTrans
     global cls
     global inputParameters
     global inputParametersForScaled
     global optionalParameters
     name=name_local
-    fileList=fileList_local
-    cls=cls_local
+    fileListRefl=fileListRefl_local
+    fileListTrans=fileListTrans_local
     inputParameters=inputParameters_local
     inputParametersForScaled=inputParametersForScaled_local
     if optionalParameterDict is not None:
