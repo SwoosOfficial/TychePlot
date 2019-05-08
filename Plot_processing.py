@@ -40,7 +40,7 @@ def initPlot(xCol=1, showColTup=(2,3), customInputParameters=None):
                                xCol=xCol,
                                showColTup=showColTup,
                                **inputParameters)
-        if scaled:
+        if optionalParameters["scaled"]:
             scPlot=cls(fileList,
                                  name,
                                  xCol=xCol,
