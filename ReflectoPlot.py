@@ -99,7 +99,7 @@ class ReflectoPlot(Plot):
         self.fileListTrans=fileListTrans
         self.fileListRefl=fileListRefl
         self.labelsOrig=self.labels
-        self.labels=[l +" "+self.showColLabel[self.showCol] for l in self.labels]
+        self.labels=self.labels#[l +" "+self.showColLabel[self.showCol] for l in self.labels]
         self.showTrans=showTrans
         self.showRefl=showRefl
         self.showAbs=showAbs
