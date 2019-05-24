@@ -1,8 +1,8 @@
 import numpy as np
 import collections
 import itertools
-BLZFiles = {500: "angMeas/150-BLZ-500-nm.txt", 
-            780: "angMeas/100-BLZ-780-nm.txt"}
+BLZFiles = {500: "../TychePlot/angMeas/150-BLZ-500-nm.txt", 
+            780: "./TychePlot/angMeas/100-BLZ-780-nm.txt"}
 class Line:
     def __init__(self, data):
         self.pos = [float(val) for val in data[1:5]]
