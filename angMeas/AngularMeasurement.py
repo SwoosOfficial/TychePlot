@@ -132,7 +132,7 @@ import matplotlib.pyplot as plt
 def PlotMeasurement(filename,wavelength = -1, BLZFile= 500, index = 0, savepath = ""):
     file = filename
     meas = AngularMeasFile(file, BLZFile)
-    a_meas = meas.getMeas('ANGULARMEAS0_MEAS')
+    a_meas = meas.getMeas('ANGULAR_MEAS')
     if savepath:
         file_begin, file_ending = savepath.split(".")
     sample = filename.split("/")[-1].split(".")[0]
@@ -158,7 +158,7 @@ def PlotMeasurement(filename,wavelength = -1, BLZFile= 500, index = 0, savepath 
 def PlotSpectrum(filename,angle = -1,w1 = 400, w2 = 800, BLZFile = 500, index = 0, savepath = ""):
     file = filename
     meas = AngularMeasFile(file, BLZFile)
-    a_meas = meas.getMeas('ANGULARMEAS0_MEAS')
+    a_meas = meas.getMeas('ANGULAR_MEAS')
     _slice = a_meas.getSlice(w1, w2)
     file_ending = savepath.split(".")[-1]
     file_begin = "".join(savepath.split(".")[0:-1])
@@ -184,7 +184,7 @@ def PlotSpectrum(filename,angle = -1,w1 = 400, w2 = 800, BLZFile = 500, index = 
 def CompareMeasurements(filenames, wavelength = -1, BLZFile = 500, index = 0, savepath = ""):
 
     measfiles = [AngularMeasFile(file, BLZFile) for file in filenames]
-    a_meas = [meas.getMeas('ANGULARMEAS0_MEAS') for meas in measfiles]
+    a_meas = [meas.getMeas('ANGULAR_MEAS') for meas in measfiles]
     if wavelength is -1:
         w = a_meas[0].getPeakWavelength(index)
     else: 
