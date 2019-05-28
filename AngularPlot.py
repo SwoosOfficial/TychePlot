@@ -11,7 +11,10 @@ import itertools
 from Data import Data
 from Plot import Plot
 
-
+BLZ_path_dict= {
+                  500: "/home/tassilo/Documents/Data/TychePlot/angMeas/150-BLZ-500-nm.txt", 
+                  780: "/home/tassilo/Documents/Data/TychePlot/angMeas/100-BLZ-780-nm.txt"
+                }
 
 class Line:
     def __init__(self, data):
@@ -58,7 +61,6 @@ class AngularMeasurement(Measurement):
         pos = 0
         for i, val in enumerate(data):
             if(val.getOwisPol()==zero_dat and data[i-1].getOwisPol()!=zero_dat) and i>0:
-   
                 measurements.append(data[pos:i-1])
                 pos = i
                 #print(pos)
@@ -104,8 +106,10 @@ class AngularMeasurement(Measurement):
     def getDataAtWavelength(self, w, p, index = 0):
         w_index = self.getIndex(w, self.w)
         return [val[w_index] for val in self.dat[index][self.getIndex(p, self.pol_pos)]]
-    def getDataAtAngle(self, a, p, index = 0):
-        return self.dat[index][self.getIndex(p, self.pol_pos)][self.getIndex(a, self.angles)]
+    def getDataAtAngle(self, p, a = None, index = 0):
+        if a is None:
+            a = self.getMinimumAngle(index = index)
+        return list(self.dat[index][self.getIndex(p, self.pol_pos)][self.getIndex(a, self.angles)])
     def getDataAt(self, w, a, p, index):
         return self.dat[index][self.getIndex(p, self.pol_pos)][self.getIndex(a, self.angles)][self.getIndex(w, self.w)]
     def getAngles(self, p, index = 0):
@@ -122,8 +126,7 @@ class AngularMeasurement(Measurement):
         return slice(self.getIndex(w1, self.w),self.getIndex(w2,self.w))
 
 class AngularMeasFile:
-    def __init__(self, filename, wavelength, BLZFiles= {500: "/home/tassilo/Documents/Data/Calculator_V2/angMeas/150-BLZ-500-nm.txt", 
-                             780: "/home/tassilo/Documents/Data/Calculator_V2/angMeas/100-BLZ-780-nm.txt"}):
+    def __init__(self, filename, wavelength, BLZFiles = BLZ_path_dict):
         self.w_data = [float(line) for line in open(BLZFiles[wavelength])]
         file = open(filename)
         _data = collections.defaultdict(list)
@@ -150,16 +153,16 @@ class AngularPlot(Plot):
     def __init__(self,
                  name,
                  fileList,
-                 BLZFiles = {500: "/home/tassilo/Documents/Data/Calculator_V2/angMeas/150-BLZ-500-nm.txt", 
-                             780: "/home/tassilo/Documents/Data/Calculator_V2/angMeas/100-BLZ-780-nm.txt"},
+                 BLZFiles = BLZ_path_dict,
                  BLZFile= 500,
                  index=0,
-                 meas_type='ANGULARMEAS0_MEAS',
+                 meas_type='ANGULAR_MEAS',
                  wavelength=-1,
-                 showColAxType=["lin","lin","lin","lin"],
-                 showColAxLim=[None,None,None,None],
-                 showColLabel= ["","Angle","Intensity (s-polarised)", "Intensity (p-polarised)"],
-                 showColLabelUnit=["","Angle (°)","s-polarised Intensity (a.u.)","p-polarised Intensity (a.u)"],
+                 angle=-1,
+                 showColAxType=["lin","lin","lin","lin","lin"],
+                 showColAxLim=[None,None,None,None,None],
+                 showColLabel= ["","Wavelength", "Angle", "Intensity (s-polarised)", "Intensity (p-polarised)", "Intensity (s-polarised)", "Intensity (p-polarised)"],
+                 showColLabelUnit=["","Wavelength (nm)", "Angle (°)", "s-polarised Intensity (a.u.)", "p-polarised Intensity (a.u)", "s-polarised Intensity (a.u.)", "p-polarised Intensity (a.u)"],
                 **kwargs):
         Plot.__init__(self, name, fileList, dataImported=True, showColAxType=showColAxType,
                  showColAxLim=showColAxLim,
@@ -171,7 +174,7 @@ class AngularPlot(Plot):
         self.index=index
         self.meas_type=meas_type
         self.wavelength=wavelength
-        
+        self.angle=angle
         self.dataList=self.importData()
         
     def importData(self):
@@ -182,18 +185,16 @@ class AngularPlot(Plot):
             for fileZ in sampleList:
                 meas = AngularMeasFile(fileZ, self.BLZFile, BLZFiles=self.BLZFiles)
                 a_meas = meas.getMeas(self.meas_type)
-                if(self.wavelength is -1):
+                if(self.wavelength == -1):
                     w = a_meas.getPeakWavelength(index)
                 else:
                     w = self.wavelength
-
-                dataSubList.append(Data(Data.mergeData([a_meas.getAngles(90, index),a_meas.getDataAtWavelength(w, 0, index),a_meas.getDataAtWavelength(w, 90, index)])))
+                if (self.angle == -1):
+                    angle = None
+                else:
+                    angle = self.angle
+                print([a_meas.getWavelengths(), a_meas.getAngles(0, index), a_meas.getDataAtAngle(0, angle, index), a_meas.getDataAtAngle(90, angle, index), a_meas.getDataAtWavelength(w, 0, index),a_meas.getDataAtWavelength(w, 90, index)])
+                dataSubList.append(Data(Data.mergeData([a_meas.getWavelengths(), a_meas.getAngles(0, index), a_meas.getDataAtAngle(0, angle, index), a_meas.getDataAtAngle(90, angle, index), a_meas.getDataAtWavelength(w, 0, index),a_meas.getDataAtWavelength(w, 90, index)])))
             dataList.append(dataSubList)
         return dataList
-            
-   
         
-        
-
-
-
