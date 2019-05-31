@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+import copy
+
 inputParameters={}
 inputParametersForScaled={}
 fileList=[]
@@ -14,29 +16,39 @@ optionalParameters={
 cls=None
 
 def initPlot(xCol=1, showColTup=(2,3), customInputParameters=None):
+    local_inputParameters=copy.deepcopy(inputParameters)
+    local_inputParametersForScaled=copy.deepcopy(inputParametersForScaled)
     if customInputParameters is not None:
-        inputParameters.update(customInputParameters)
-        inputParametersForScaled.update(customInputParameters)
+        local_inputParameters.update(customInputParameters)
+        local_inputParametersForScaled.update(customInputParameters)
+        try:
+            local_optionalParameters=customInputParameters["optionalParameters"]
+            local_inputParameters.pop("optionalParameters")
+            local_inputParametersForScaled.pop("optionalParameters")
+        except KeyError:
+            local_optionalParameters=copy.deepcopy(optionalParameters)
+    else:
+        local_optionalParameters=copy.deepcopy(optionalParameters)
     scPlot=None
-    if optionalParameters["customLims"]:
+    if local_optionalParameters["customLims"]:
         plot=cls(
                     name,
                     fileList,
                     xCol=xCol,
                     showColTup=showColTup,
-                    xLimOrig=optionalParameters["xOrigLims"][showColTup[0]],
-                    showColAxLim=optionalParameters["yAxisLims"], 
-                    **inputParameters
+                    xLimOrig=local_optionalParameters["xOrigLims"][showColTup[0]],
+                    showColAxLim=local_optionalParameters["yAxisLims"], 
+                    **local_inputParameters
         )
-        if optionalParameters["scaled"]:
+        if local_optionalParameters["scaled"]:
             scPlot=cls(
                             name,
                             fileList,
                             xCol=xCol,
                             showColTup=showColTup,
-                            xLimOrig=optionalParameters["xOrigLims"][showColTup[0]],
-                            showColAxLim=optionalParameters["yAxisLims"], 
-                            **inputParametersForScaled
+                            xLimOrig=local_optionalParameters["xOrigLims"][showColTup[0]],
+                            showColAxLim=local_optionalParameters["yAxisLims"], 
+                            **local_inputParametersForScaled
             )
     else:
         plot=cls(
@@ -44,15 +56,15 @@ def initPlot(xCol=1, showColTup=(2,3), customInputParameters=None):
                     fileList,
                     xCol=xCol,
                     showColTup=showColTup,
-                    **inputParameters
+                    **local_inputParameters
         )
-        if optionalParameters["scaled"]:
+        if local_optionalParameters["scaled"]:
             scPlot=cls(
                             name,
                             fileList,
                             xCol=xCol,
                             showColTup=showColTup,
-                            **inputParametersForScaled
+                            **local_inputParametersForScaled
             )
     if scPlot is None:
         return [plot]

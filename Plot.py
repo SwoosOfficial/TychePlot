@@ -252,6 +252,7 @@ class Plot():
                  customLabelAx2=None,
                  doNotFit=False,
                  font=[None,None],
+                 filenamePrefix=None,
                  #ax_aspect='auto',
                 ):
         #static inits
@@ -308,7 +309,6 @@ class Plot():
         self.axXLim=xAxisLim
         self.axYLim=self.showColAxLim[self.showCol]
         self.ax2YLim=self.showColAxLim[self.showCol2]
-        self.xLabel=self.showColLabelUnit[xCol]
         self.ax2Labels=ax2Labels
         self.axYLabel=self.showColLabelUnit[self.showCol]
         self.ax2YLabel=self.showColLabelUnit[self.showCol2]
@@ -378,6 +378,7 @@ class Plot():
         self.customLabelAx2=customLabelAx2
         self.doNotFit=doNotFit
         self.font=font
+        self.filenamePrefix=filenamePrefix
         #self.ax_aspect=ax_aspect
         #inits
         self.__initFileList(fileList, errors, labels, show, fitLabels)
@@ -588,6 +589,8 @@ class Plot():
             string=self.filename.replace(" ","")+self.fill+self.showColLabel[self.showCol].replace(" ","")
         if not self.scaleX is 1:
             string+=self.fill+"scaledWith{:03.0f}Pct".format(self.scaleX*100)
+        if self.filenamePrefix is not None:
+            string=self.filenamePrefix+string
         return string+option
         
         
@@ -860,7 +863,8 @@ class Plot():
     def doPlot(self):
         fig,self.ax = self._newFig()
         ax= self.ax
-        ax.set_xlabel(self.xLabel)
+        xLabel=self.showColLabelUnit[self.xCol]
+        ax.set_xlabel(xLabel)
         if self.showColAxType[self.xCol] == "log":
             ax.set_xscale("log")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
         ax.set_ylabel(self.axYLabel)
@@ -966,9 +970,4 @@ class ListShapeException(Exception):
 class FitException(Exception):
     def __init__(self,index, props, err, params):
         self.message="Error @ {} with Properties: {} \n Message: {} with parameters {}".format(index,props,str(err),str(params)) 
-   
-    
         
-                
-
-
