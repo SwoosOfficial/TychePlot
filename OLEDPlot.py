@@ -92,6 +92,13 @@ class OLEDPlot(Plot):
         deriv=np.gradient(j,volt)
         np.seterr(**oldDict)
         return deriv
+    
+    @classmethod
+    def generateFileList(cls, prefix, pixels=4, samples=4, fill="_", alphaOffset=0, truthTable=None):
+        generatedList=[[prefix+fill+cls.chars[sample+alphaOffset]+fill+str(pixel+1) for pixel in range(0,pixels)] for sample in range(0,samples)]#
+        if truthTable is None:
+            return generatedList
+        return [[sample for truth,sample in zip(truthTableForSample,sampleList) if truth] for truthTableForSample,sampleList in zip(truthTable,generatedList)]
         
     
     def __init__(self,
@@ -411,8 +418,15 @@ class OLEDPlot(Plot):
                 subDataList.append(power) #power9
                 data.setData(Data.mergeData(subDataList))
                 if self.xLim is not None:
-                    nList.append(data.getFirstIndexWhereGreaterOrEq(self.xCol,self.xLim[0]))
-                    mList.append(data.getLastIndexWhereSmallerOrEq(self.xCol,self.xLim[1]))
+                    try:
+                        if self.limCol is None:
+                            nList.append(data.getFirstIndexWhereGreaterOrEq(self.xCol,self.xLim[0]))
+                            mList.append(data.getLastIndexWhereSmallerOrEq(self.xCol,self.xLim[1]))
+                        else:
+                            nList.append(data.getFirstIndexWhereGreaterOrEq(self.limCol,self.xLim[0]))
+                            mList.append(data.getLastIndexWhereSmallerOrEq(self.limCol,self.xLim[1]))
+                    except IndexError as ie:#
+                        warnings.warn("Invalid Limits at column "+str(ie)[-1:]+" with value "+str(ie)[45:52])
             try:
                 n=max(nList)
                 m=min(mList)
@@ -562,8 +576,8 @@ class OLEDCustomFileListPlot(OLEDPlot):
     
     @classmethod
     def initByExistingPlot(cls, obj, **kwargs):
-        return cls(obj.fileList,
-                   obj.name,
+        return cls(obj.name,
+                   obj.fileList,
                    dataList=obj.dataList,
                    errList=[obj.expectData,obj.deviaData,obj.logErr],
                    dataProcessed=True,
@@ -573,8 +587,8 @@ class OLEDCustomFileListPlot(OLEDPlot):
                    )
     
     def __init__(self,
-                 fileList, #[[deviceApx1,deviceApx2],[deviceBpx1,deviceBpx2]]"
-                 name,
+                 name, #[[deviceApx1,deviceApx2],[deviceBpx1,deviceBpx2]]"
+                 fileList,
                  filename=None,
                  colorOffset=0,
                  **kwargs):

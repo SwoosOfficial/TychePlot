@@ -253,6 +253,7 @@ class Plot():
                  doNotFit=False,
                  font=[None,None],
                  filenamePrefix=None,
+                 newFileList=None,
                  #ax_aspect='auto',
                 ):
         #static inits
@@ -381,7 +382,10 @@ class Plot():
         self.filenamePrefix=filenamePrefix
         #self.ax_aspect=ax_aspect
         #inits
-        self.__initFileList(fileList, errors, labels, show, fitLabels)
+        if newFileList is not None:
+            self.__initFileList(newFileList, errors, labels, show, fitLabels)
+        else:
+            self.__initFileList(fileList, errors, labels, show, fitLabels)
         self.dataList=self.__importData()
 
         

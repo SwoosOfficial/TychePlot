@@ -81,6 +81,8 @@ def buildPlotList(desiredPlot):
         xCol2=0
     try:
         cusPara=desiredPlot["custom"]
+        if cusPara is None:
+            cusPara={}
     except KeyError:
         cusPara={}
     cusPara["xCol2"]=xCol2
