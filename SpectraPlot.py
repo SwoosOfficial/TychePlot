@@ -121,6 +121,8 @@ class SpectraPlot(Plot):
             string=self.filename
         if not self.scaleX is 1:
             string+=self.fill+"scaledWith{:03.0f}Pct".format(self.scaleX*100)
+        if self.filenamePrefix is not None:
+            string=self.filenamePrefix+string
         return string+option
     
     def processData(self):

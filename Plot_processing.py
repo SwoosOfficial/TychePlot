@@ -76,9 +76,14 @@ def buildPlotList(desiredPlot):
     except KeyError:
         yCol2=0
     try:
+        xCol2=desiredPlot["xCol2"]
+    except KeyError:
+        xCol2=0
+    try:
         cusPara=desiredPlot["custom"]
     except KeyError:
-        cusPara=None
+        cusPara={}
+    cusPara["xCol2"]=xCol2
     if desiredPlot["yCol"]==0 or desiredPlot["xCol"]==0:
         raise
     return initPlot(xCol=desiredPlot["xCol"], showColTup=(desiredPlot["yCol"],yCol2), customInputParameters=cusPara)

@@ -927,6 +927,9 @@ class Plot():
         matplotlib.pyplot.close(fig)
         return [self,self.processFileName(option=".pdf")] #filename
     
+    def processAllAndExport(self, **kwargs):
+        self.exportAllData(**kwargs)
+    
     def exportAllData(self, fileEnd=".csv", colSep=",", fill=None, errorTypes=None, errorString="Error of ", expectData=None, errData=None):
         if expectData is None:
             expectData=self.expectData
