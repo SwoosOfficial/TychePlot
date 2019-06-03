@@ -134,7 +134,7 @@ class ReflectoPlot(Plot):
 
     def processFileName(self, option=".pdf"):
         if self.filename is None:
-            string=self.name.replace(" ","")+self.fill+"spectra"
+            string=self.name.replace(" ","")+self.fill+"abs_spectra"
         else:
             string=self.filename
         if not self.scaleX is 1:
