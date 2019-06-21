@@ -865,7 +865,7 @@ class Plot():
 
               
     def doPlot(self):
-        if !self.no_plot:
+        if not self.no_plot:
             fig,self.ax = self._newFig()
             ax= self.ax
             xLabel=self.showColLabelUnit[self.xCol]
