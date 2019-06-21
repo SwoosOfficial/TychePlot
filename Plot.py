@@ -255,6 +255,7 @@ class Plot():
                  filenamePrefix=None,
                  newFileList=None,
                  concentenate_files_instead_of_avg=False,
+                 no_plot=False,
                  #ax_aspect='auto',
                 ):
         #static inits
@@ -397,6 +398,7 @@ class Plot():
         self.font=font
         self.filenamePrefix=filenamePrefix
         self.concentenate_files_instead_of_avg=concentenate_files_instead_of_avg
+        self.no_plot=no_plot
         #self.ax_aspect=ax_aspect
         #inits
         if newFileList is not None:
@@ -863,84 +865,85 @@ class Plot():
 
               
     def doPlot(self):
-        fig,self.ax = self._newFig()
-        ax= self.ax
-        xLabel=self.showColLabelUnit[self.xCol]
-        ax.set_xlabel(xLabel)
-        if self.showColAxType[self.xCol] == "log":
-            ax.set_xscale("log")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
-        ax.set_ylabel(self.axYLabel)
-        try:
-            if self.showColAxType[self.showCol] == "log":
-                ax.set_yscale("log")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
-        except TypeError:
-            if self.showColAxType[self.showCol[0]] == "log":
-                ax.set_yscale("log")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
-        if self.axYLim is not None:
-            ax.set_ylim(*self.axYLim)
-        if self.axXLim is not None:
-            ax.set_xlim(*self.axXLim)
-        ax.grid(True, alpha=0.5, linestyle=":")
-        try:
-            if self.showCol2 != 0:
+        if !self.no_plot:
+            fig,self.ax = self._newFig()
+            ax= self.ax
+            xLabel=self.showColLabelUnit[self.xCol]
+            ax.set_xlabel(xLabel)
+            if self.showColAxType[self.xCol] == "log":
+                ax.set_xscale("log")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
+            ax.set_ylabel(self.axYLabel)
+            try:
+                if self.showColAxType[self.showCol] == "log":
+                    ax.set_yscale("log")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
+            except TypeError:
+                if self.showColAxType[self.showCol[0]] == "log":
+                    ax.set_yscale("log")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
+            if self.axYLim is not None:
+                ax.set_ylim(*self.axYLim)
+            if self.axXLim is not None:
+                ax.set_xlim(*self.axXLim)
+            ax.grid(True, alpha=0.5, linestyle=":")
+            try:
+                if self.showCol2 != 0:
+                    if True in [a[1] for a in self.show]: 
+                        self.ax2= ax.twinx()
+                        ax2=self.ax2
+                        ax2.set_ylabel(self.ax2YLabel)
+                        if self.showColAxType[self.showCol2] == "log":
+                            ax2.set_yscale("log")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
+                        if self.ax2YLim is not None:
+                            ax2.set_ylim(*self.ax2YLim)
+            except TypeError:
                 if True in [a[1] for a in self.show]: 
                     self.ax2= ax.twinx()
                     ax2=self.ax2
                     ax2.set_ylabel(self.ax2YLabel)
-                    if self.showColAxType[self.showCol2] == "log":
+                    if self.showColAxType[self.showCol2[0]] == "log":
                         ax2.set_yscale("log")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
                     if self.ax2YLim is not None:
                         ax2.set_ylim(*self.ax2YLim)
-        except TypeError:
-            if True in [a[1] for a in self.show]: 
-                self.ax2= ax.twinx()
-                ax2=self.ax2
-                ax2.set_ylabel(self.ax2YLabel)
-                if self.showColAxType[self.showCol2[0]] == "log":
-                    ax2.set_yscale("log")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
-                if self.ax2YLim is not None:
-                    ax2.set_ylim(*self.ax2YLim)
-        self.dataList=self.processData()
-        self.expectData, self.deviaData=self.processAverage()
-        if self.fitList is not None:
-            self.fitterList=self.__initFitter()
-            self.__processFit()
-        self.processPlot()
-        if self.xCol2 != 0:
-            self.axX2=ax.twiny()
-            axX2=self.axX2
-            axX2.set_xlim(ax.get_xlim())
-            axX2.set_xlabel(self.ax2XLabel)
-            if self.showColAxType[self.xCol2] == "log":
-                axX2.set_xscale("log")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
-            if self.ax2XLim is not None:
-                ax2.set_xlim(*self.ax2XLim)
-        exec(self.injCode)
-        self.afterPlot()
-        handles, labels=ax.get_legend_handles_labels()
-        handles = [h[0] for h in handles]
-        #labels = labels[0:self.devices]
-        if True in [a[1] for a in self.show] and self.ax2Labels and self.showCol2 is not 0:
-            handles2, labels2=ax2.get_legend_handles_labels()
-            handles2 = [h[0] for h in handles2]
-            #labels2 = labels2[0:self.devices]
-            handles=handles+handles2
-            labels=labels+labels2
-        if self.fitList is not None and not self.showFitInLegend:
-            index_list = [True if x not in self.fitLabels else False for x in labels]
-            labels = [l for l,index in zip(labels,index_list) if index]
-            handles = [h for h,index in zip(handles,index_list) if index]
-        if self.legendBool:
-            leg=ax.legend(handles, labels, loc=self.legLoc, numpoints=1)
-            leg.get_frame().set_linewidth(self.legendEdgeSize)
-        if self.titleBool:
-            ax.set_title(self.title, fontsize=self.titleFontsize)
-        matplotlib.pyplot.tight_layout()
-        if self.xCol2 != 0:
-            axX2.set_xticklabels(self.xColTicksToXCol2Ticks(ax.get_xticks()))
-        self.saveFig()
-        self._rescaleRcParams()
-        matplotlib.pyplot.close(fig)
+            self.dataList=self.processData()
+            self.expectData, self.deviaData=self.processAverage()
+            if self.fitList is not None:
+                self.fitterList=self.__initFitter()
+                self.__processFit()
+            self.processPlot()
+            if self.xCol2 != 0:
+                self.axX2=ax.twiny()
+                axX2=self.axX2
+                axX2.set_xlim(ax.get_xlim())
+                axX2.set_xlabel(self.ax2XLabel)
+                if self.showColAxType[self.xCol2] == "log":
+                    axX2.set_xscale("log")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
+                if self.ax2XLim is not None:
+                    ax2.set_xlim(*self.ax2XLim)
+            exec(self.injCode)
+            self.afterPlot()
+            handles, labels=ax.get_legend_handles_labels()
+            handles = [h[0] for h in handles]
+            #labels = labels[0:self.devices]
+            if True in [a[1] for a in self.show] and self.ax2Labels and self.showCol2 is not 0:
+                handles2, labels2=ax2.get_legend_handles_labels()
+                handles2 = [h[0] for h in handles2]
+                #labels2 = labels2[0:self.devices]
+                handles=handles+handles2
+                labels=labels+labels2
+            if self.fitList is not None and not self.showFitInLegend:
+                index_list = [True if x not in self.fitLabels else False for x in labels]
+                labels = [l for l,index in zip(labels,index_list) if index]
+                handles = [h for h,index in zip(handles,index_list) if index]
+            if self.legendBool:
+                leg=ax.legend(handles, labels, loc=self.legLoc, numpoints=1)
+                leg.get_frame().set_linewidth(self.legendEdgeSize)
+            if self.titleBool:
+                ax.set_title(self.title, fontsize=self.titleFontsize)
+            matplotlib.pyplot.tight_layout()
+            if self.xCol2 != 0:
+                axX2.set_xticklabels(self.xColTicksToXCol2Ticks(ax.get_xticks()))
+            self.saveFig()
+            self._rescaleRcParams()
+            matplotlib.pyplot.close(fig)
         return [self,self.processFileName(option=".pdf")] #filename
     
     def processAllAndExport(self, **kwargs):
@@ -979,7 +982,7 @@ class Plot():
                     if noError:
                         line+=str(expectArray[a][o])+colSep
                     else:
-                        line+=str(errData[errorTypes[o]][l][a][o])+colSep
+                        line+=str(expectArray[a][o])+colSep+str(errData[errorTypes[o]][l][a][o])+colSep
                 line+="\n"
                 file.write(line)
             file.close()
