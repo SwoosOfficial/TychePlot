@@ -31,12 +31,16 @@ def initPlot(xCol=1, showColTup=(2,3), customInputParameters=None):
         local_optionalParameters=copy.deepcopy(optionalParameters)
     scPlot=None
     if local_optionalParameters["customLims"]:
+        try:
+            xLimOrig=local_optionalParameters["xOrigLims"][showColTup[0]]
+        except TypeError:
+            xLimOrig=local_optionalParameters["xOrigLims"][showColTup[0][0]]
         plot=cls(
                     name,
                     fileList,
                     xCol=xCol,
                     showColTup=showColTup,
-                    xLimOrig=local_optionalParameters["xOrigLims"][showColTup[0]],
+                    xLimOrig=xLimOrig,
                     showColAxLim=local_optionalParameters["yAxisLims"], 
                     **local_inputParameters
         )
@@ -46,7 +50,7 @@ def initPlot(xCol=1, showColTup=(2,3), customInputParameters=None):
                             fileList,
                             xCol=xCol,
                             showColTup=showColTup,
-                            xLimOrig=local_optionalParameters["xOrigLims"][showColTup[0]],
+                            xLimOrig=xLimOrig,
                             showColAxLim=local_optionalParameters["yAxisLims"], 
                             **local_inputParametersForScaled
             )
@@ -124,8 +128,8 @@ def calc(name_local, fileList_local, desiredPlots, inputParameters_local, cls_lo
     files=[[plotOutput[1] for plotOutput in plotPair] for plotPair in multiOutput]
     return (plots,files)
 
-def export_data(plots):
+def export_data(plots, **kwargs):
     for plotpair in plots:
         for plot in plotpair:
-            plot.processAllAndExport()
+            plot.processAllAndExport(**kwargs)
 

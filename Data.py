@@ -34,8 +34,8 @@ class Data:
             xCol=self.xCol
         if yCol == 0:
             yCol=self.yCol
-        xdata=data[range(0,len(data)),[xCol-1]*len(data)]
-        ydata=data[range(0,len(data)),[yCol-1]*len(data)]
+        xdata=np.asarray(data[:,xCol-1])
+        ydata=np.asarray(data[:,yCol-1])
         return xdata, ydata
     
     @classmethod
@@ -83,9 +83,9 @@ class Data:
     def processData(self, function, x=False, y=True, xCol=1, yCol=2, **kwargs):
         data = self.getData()
         if (x == True):
-            data[range(0,len(data)),[xCol-1]*len(data)] = function(data[range(0,len(data)),[xCol-1]*len(data)])
+            data[range(0,len(data)),[xCol-1]*len(data)] = function(data[range(0,len(data)),[xCol-1]*len(data)], **kwargs)
         if (y == True):
-            data[range(0,len(data)),[yCol-1]*len(data)] = function(data[range(0,len(data)),[yCol-1]*len(data)])
+            data[range(0,len(data)),[yCol-1]*len(data)] = function(data[range(0,len(data)),[yCol-1]*len(data)], **kwargs)
         self.setData(data)
 
     
