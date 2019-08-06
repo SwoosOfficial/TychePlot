@@ -5,8 +5,8 @@
 
 
 import matplotlib as mpl
-mpl.use("pgf")
-import matplotlib.pyplot
+#mpl.use("pgf")
+#import matplotlib.pyplot
 import numpy as np
 import scipy.interpolate as inter
 import copy
@@ -94,8 +94,8 @@ class OLEDPlot(Plot):
         return deriv
     
     @classmethod
-    def generateFileList(cls, prefix, pixels=4, samples=4, fill="_", alphaOffset=0, truthTable=None):
-        generatedList=[[prefix+fill+cls.chars[sample+alphaOffset]+fill+str(pixel+1) for pixel in range(0,pixels)] for sample in range(0,samples)]#
+    def generateFileList(cls, prefix, pixels=4, samples=4, fill="_", alphaOffset=0, truthTable=None, postfix=""):
+        generatedList=[[prefix+fill+cls.chars[sample+alphaOffset]+postfix+fill+str(pixel+1) for pixel in range(0,pixels)] for sample in range(0,samples)]#
         if truthTable is None:
             return generatedList
         return [[sample for truth,sample in zip(truthTableForSample,sampleList) if truth] for truthTableForSample,sampleList in zip(truthTable,generatedList)]
@@ -451,9 +451,9 @@ class OLEDPlot(Plot):
 
             else:
                 self.dataList=[[Data(fileToNpArray(pixel, **self.fileFormat)[0], xCol=self.xCol, yCol=self.showCol) for pixel in device] for device in self.fileList]
-            for dataSubList in self.dataList:
-                for data in dataSubList:
-                    data.removeDoubles(xCol=self.xColOrig)
+            #for dataSubList in self.dataList:
+            #    for data in dataSubList:
+            #        data.removeDoubles(xCol=self.xColOrig)
                     
         return self.dataList
     

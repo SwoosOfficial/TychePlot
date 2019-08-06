@@ -3,19 +3,10 @@
 
 # In[1]:
 
-texPreamble=[r"\usepackage{amsmath}",
-             #r"\usepackage{lmodern}",
-             #r"\usepackage{mathspec}",
-             #r"\usepackage[no-sscript]{xltxtra}",
-             #r"\IfFontExistsTF{DejaVu Sans}{\setmainfont{DejaVu Sans}\setmathfont(Digits,Latin,Greek){DejaVu Sans}\setmathrm{DejaVu Sans}}{}"
-             #"\IfFontExistsTF{Latin Modern Sans}{\setmainfont{Latin Modern Sans}"#\setmathfont(Digits,Latin,Greek){Latin Modern Sans}\setmathrm{Latin Modern Sans}}{}"
-             #r"\IfFontExistsTF{Minion Pro}{\setmainfont{Minion Pro}\setmathfont(Digits,Latin,Greek){Minion Pro}\setmathrm{Minion Pro}}{}"
-            ]
 pgfSys="lualatex"
 
 import matplotlib as mpl
 mpl.use("pgf")
-import matplotlib.pyplot
 import numpy as np
 import scipy.interpolate as inter
 import copy
@@ -251,11 +242,12 @@ class Plot():
                  titleFontsize="x-large",
                  customLabelAx2=None,
                  doNotFit=False,
-                 font=[None,None],
+                 font="Latin Modern Sans",
                  filenamePrefix=None,
                  newFileList=None,
                  concentenate_files_instead_of_avg=False,
                  no_plot=False,
+                 useTex=True,
                  #ax_aspect='auto',
                 ):
         #static inits
@@ -287,8 +279,14 @@ class Plot():
             except:
                 raise
         else:
-            self.showColLabel=showColLabel 
-        self.showColLabelUnit=showColLabelUnit
+            self.showColLabel=showColLabel
+        self.useTex=useTex
+        if self.useTex:
+            mpl.use("pgf")
+            self.showColLabelUnit=showColLabelUnit
+        else:
+            mpl.use("Qt5Agg")
+            self.showColLabelUnit=showColLabelUnitNoTex
         self.showColLabelUnitNoTex=showColLabelUnitNoTex
         if yLim is not None:
             if len(yLim) is 2:
@@ -401,6 +399,10 @@ class Plot():
         self.no_plot=no_plot
         #self.ax_aspect=ax_aspect
         #inits
+        #if mpl_use == "pgf":
+        #    self.mpl_tex = True;
+        #else:
+        #    self.mpl_tex = False
         if newFileList is not None:
             self.__initFileList(newFileList, errors, labels, show, fitLabels)
         else:
@@ -431,6 +433,7 @@ class Plot():
         return fig_size
 
     def _newFig(self):
+        import matplotlib.pyplot
         matplotlib.pyplot.clf()
         self.__initTex(customFontsize=self.customFontsize)
         fig = matplotlib.pyplot.figure(figsize=self._figsize())
@@ -445,18 +448,18 @@ class Plot():
         pgf_with_lualatex={
                 "pgf.texsystem": pgfSys,
                 "font.family": "sans-serif", # use serif/main font for text elements
-                "font.sans-serif": ["Latin Modern Sans"],
+                "font.sans-serif": [self.font],
                 "mathtext.fontset":"custom",
-                "mathtext.rm": "Latin Modern Sans",
-                "mathtext.sf": "Latin Modern Sans",
+                "mathtext.rm": self.font,
+                "mathtext.sf": self.font,
                 "font.size": self.customFontsize[0],
                 "axes.labelsize": self.customFontsize[1],               # LaTeX default is 10pt font.
                 "legend.fontsize": self.customFontsize[2],               # Make the legend/label fonts a little smaller
                 "xtick.labelsize": self.customFontsize[3],
                 "ytick.labelsize": self.customFontsize[4],
-                "text.usetex": False,    # use inline math for ticks
+                "text.usetex": True,    # use inline math for ticks
                 "pgf.rcfonts": False, 
-                "pgf.preamble": texPreamble
+                "pgf.preamble": [r"\usepackage{amsmath}"]
             }
         if self.customFontsize is not None and len(self.customFontsize) is 5:
             pgf_with_lualatex.update({
@@ -475,14 +478,10 @@ class Plot():
                 "xtick.labelsize": "medium",
                 "ytick.labelsize": "medium",
             })
-        if self.font[0] is not None:
-            pgf_with_lualatex.update({"font.family": self.font[0]})
-        if self.font[1] is not None:
-            if self.font[1] is "serif":
-                pgf_with_lualatex.update({"font."+font[0]: [self.font[1]]})
-            else:
-                pgf_with_lualatex.update({"font."+"sans-serif": [self.font[1]]})
-        mpl.rcParams.update(pgf_with_lualatex)
+        if self.useTex== True:
+            mpl.rcParams.update(pgf_with_lualatex)
+        else:
+            mpl.rcParams.update({"text.usetex": False, "backend":"Qt5Agg"})
         self._scaleRcParams()
     
     #fitTuple ([start, end], [show_start, show_end],func , (param1,param2), (textXPos,textYPos), desc, addKwArgs)
@@ -599,8 +598,13 @@ class Plot():
     
     
     def saveFig(self):
-        matplotlib.pyplot.savefig(self.processFileName(option=".pdf"), bbox_inches='tight')
-        matplotlib.pyplot.savefig(self.processFileName(option=".pgf"), bbox_inches='tight')
+        import matplotlib.pyplot
+        if self.useTex:
+            matplotlib.pyplot.savefig(self.processFileName(option=".pdf"), bbox_inches='tight')
+            matplotlib.pyplot.savefig(self.processFileName(option=".pgf"), bbox_inches='tight')
+        else:
+            #matplotlib.pyplot.show()
+            matplotlib.pyplot.savefig(self.processFileName(option=".png"))
         
     def processFileName(self, option=".pdf"):
         if self.filename is None:
@@ -712,8 +716,10 @@ class Plot():
             symErr=[(np.absolute(expect.getData()-devia.getData())) for devia,expect in zip(deviaData, expectData)]
             minErr=[np.absolute(expect.getData()-mind) for devia,expect,mind in zip(deviaData, expectData, minData)]
             maxErr=[np.absolute(expect.getData()-maxi) for devia,expect,maxi in zip(deviaData, expectData, maxData)]
-            logErrMin=[np.nan_to_num(np.minimum(err, mind)) for err,mind in zip(symErr,minErr)]
-            logErrMax=[np.nan_to_num(np.minimum(err, maxi)) for err,maxi in zip(symErr,maxErr)]
+            logErrMin=[np.nan_to_num(np.minimum(err, mind), nan=0, posinf=0, neginf=0) for err,mind in zip(symErr,minErr)]
+            logErrMax=[np.nan_to_num(np.minimum(err, maxi), nan=0, posinf=0, neginf=0) for err,maxi in zip(symErr,maxErr)]
+            # if any error is as high that the bar would reach zero, set it to zero
+            logErrMin=np.asarray([[[errv if value>errv else 0.0 for errv,value in zip(errv_row,value_row)] for errv_row,value_row in zip(err,expect.getData())] for err,expect in zip(logErrMin, expectData)])
         except ValueError:
             warnings.warn("Unsupported Input for Error estimation given")
             logErrMin=[np.zeros(expect.getData().shape) for expect in expectData]
@@ -778,7 +784,6 @@ class Plot():
         colorOffset=self.colorOffset
         ax=self.ax
         ax2=self.ax2
-        
         if self.iterLinestyles:
             linestyles=self.linestyles
             linestyleOffset=self.linestyleOffset
@@ -865,6 +870,7 @@ class Plot():
 
               
     def doPlot(self):
+        import matplotlib.pyplot
         if not self.no_plot:
             fig,self.ax = self._newFig()
             ax= self.ax

@@ -139,7 +139,7 @@ class ReflectoPlot(Plot):
             string=self.filename
         if not self.scaleX is 1:
             string+=self.fill+"scaledWith{:03.0f}Pct".format(self.scaleX*100)
-        if not self.filenamePrefix is not None:
+        if not self.filenamePrefix is None:
             string=self.filenamePrefix+self.fill+string
         return string+option
     

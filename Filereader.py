@@ -8,7 +8,7 @@ import numpy as np
 
 # In[5]:
 
-def fileToNpArray(filename, separator=",", skiplines=1, backoffset=0, lastlines=0, exceptColumns=[], commaToPoint=False, lastlineNoNewLine=False, fileEnding=None, transpose=False):
+def fileToNpArray(filename, separator=",", skiplines=1, backoffset=0, lastlines=0, exceptColumns=[], commaToPoint=False, lastlineNoNewLine=False, fileEnding=None, transpose=False, ignoreRowCol=None):
     if fileEnding is None:
         file = open(filename,"r")
     else:
@@ -41,35 +41,23 @@ def fileToNpArray(filename, separator=",", skiplines=1, backoffset=0, lastlines=
             if separator != " ":
                 item = item.replace(" ","")
             line = item.split(separator)
-            #if separator == " ":
             line = list(filter(None, line))
             if commaToPoint==True:
                 line=[a.replace(",",".") for a in line]
             preArray.append(line)
+        if ignoreRowCol is not None:
+            preArray[ignoreRowCol[0]][ignoreRowCol[1]]=0.0
         if (len(exceptColumns)!=0):
             for n in preArray:
                 for a,b in zip(exceptColumns, range(0,len(exceptColumns))):
                     del n[a-b]
+        #print(preArray)
         fileToNpArray.array = np.asarray(preArray, dtype=np.float64)
         if transpose:
             fileToNpArray.array=np.transpose(fileToNpArray.array)
         #fileToNpArray.array = preArray
     except ValueError as err:
         raise Exception("Error importing file: "+ filename+": "+str(err)+" at line "+str(x+skiplines))
-        """skiplinesBoolean = input("Is this the first line of data: " + lines[skiplines] + "\n y/n?")
-        if skiplinesBoolean == "y" or skiplinesBoolean == "Y":
-            separatorBoolean = input("Is this the separator of data, coulums: \"" + separator + "\"\n y/n?")
-            if separatorBoolean == "y" or skiplinesBoolean == "Y":
-                raise ValueError("There was an error creating the array from the Data.")
-            else:
-                separator = input("Please specify the new separator:")
-        else:
-            skiplinesOperator = input("How many lines are description/nondata? \nType \"next\" for trying the next line.")
-            if skiplinesOperator.isdigit():
-                skiplines = int(skiplinesOperator)
-            else:
-                skiplines += 1 
-        fileToNpArray.array, descList = fileToNpArray(filename, separator=separator, skiplines=skiplines)"""
     return fileToNpArray.array, descList
 
 def npArrayToFile(filename, array, preString=None, separator=",", fileEnding=None):

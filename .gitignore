@@ -1,2 +1,9 @@
 __pycache__
 .ipynb_checkpoints
+lib
+lib64
+bin
+include
+share
+etc
+pyvenv.cfg
