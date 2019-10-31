@@ -97,11 +97,12 @@ class SpectraPlot(Plot):
                  rainbowMode=False,
                  fitColors=['#1f77b4','#d62728','#2ca02c','#9467bd','#8c564b','#e377c2','#7f7f7f','#ff7f0e','#bcbd22','#17becf','#f8e520'],
                  bgfile=None,
+                 validYTable=None,
                  **kwargs
                 ):
         if rainbowMode:
             kwargs.update({"legendBool":False})
-        Plot.__init__(self, name, fileList, averageMedian=averageMedian, showColAxType=showColAxType, showColAxLim=showColAxLim, showColLabel=showColLabel, showColLabelUnit=showColLabelUnit, fileFormat=fileFormat, errors=errors, fitColors=fitColors, **kwargs)
+        Plot.__init__(self, name, fileList, averageMedian=averageMedian, showColAxType=showColAxType, showColAxLim=showColAxLim, showColLabel=showColLabel, showColLabelUnit=showColLabelUnit, fileFormat=fileFormat, errors=errors, fitColors=fitColors, partialFitLabels=["Partial mono-Gaussian fit"], **kwargs)
         #dyn inits
         if title is None:
             self.title=name
@@ -112,6 +113,7 @@ class SpectraPlot(Plot):
         self.xParamPos=xParamPos
         self.rainbowMode=rainbowMode
         self.bgfile=bgfile
+        self.validYTable=validYTable
         #self.dataList=self.importData()
    
     def processFileName(self, option=".pdf"):
@@ -127,41 +129,78 @@ class SpectraPlot(Plot):
     
     def processData(self):
         if not self.dataProcessed:
-            if self.bgfile is None:
-                for device in self.dataList:
-                    for data, yCol, bg in zip(device,self.validYCol, self.bgYCol):
-                        try:
-                            energy,specRad=self.wavelengthToEV(data.getSplitData2D(xCol=1, yCol=yCol)[0], data.getSplitData2D(xCol=1,yCol=yCol)[1]- data.getSplitData2D(xCol=1,yCol=bg)[1])
-                            data.setData(Data.mergeData((data.getSplitData2D(xCol=1, yCol=yCol)[0], data.getSplitData2D(xCol=1,yCol=yCol)[1]- data.getSplitData2D(xCol=1,yCol=bg)[1],data.getSplitData2D(xCol=1,yCol=yCol)[1]- data.getSplitData2D(xCol=1,yCol=bg)[1],energy,specRad,specRad)))
-                        except (IndexError,TypeError):
-                            energy,specRad=self.wavelengthToEV(*data.getSplitData2D(xCol=1, yCol=yCol))
-                            data.setData(Data.mergeData((data.getSplitData2D(xCol=1, yCol=yCol)[0],data.getSplitData2D(xCol=1,yCol=yCol)[1],data.getSplitData2D(xCol=1,yCol=yCol)[1],energy,specRad,specRad)))
-                        data.processData(self.noNegatives, yCol=2)
-                        data.processData(self.noNegatives, yCol=3)
-                        data.processData(self.noNegatives, yCol=5)
-                        data.processData(self.noNegatives, yCol=6)
-                        data.processData(self.normalize, yCol=2)
-                        data.processData(self.normalize, yCol=5)
-                        data.limitData(xLim=self.xLimOrig)
-                        self.dataProcessed=True
+            if self.validYTable is not None:
+                if self.bgfile is None:
+                    for device, validYCol in zip(self.dataList, self.validYTable):
+                        for data, yCol, bg in zip(device, validYCol, self.bgYCol):
+                            try:
+                                energy,specRad=self.wavelengthToEV(data.getSplitData2D(xCol=1, yCol=yCol)[0], data.getSplitData2D(xCol=1,yCol=yCol)[1]- data.getSplitData2D(xCol=1,yCol=bg)[1])
+                                data.setData(Data.mergeData((data.getSplitData2D(xCol=1, yCol=yCol)[0], data.getSplitData2D(xCol=1,yCol=yCol)[1]- data.getSplitData2D(xCol=1,yCol=bg)[1],data.getSplitData2D(xCol=1,yCol=yCol)[1]- data.getSplitData2D(xCol=1,yCol=bg)[1],energy,specRad,specRad)))
+                            except (IndexError,TypeError):
+                                energy,specRad=self.wavelengthToEV(*data.getSplitData2D(xCol=1, yCol=yCol))
+                                data.setData(Data.mergeData((data.getSplitData2D(xCol=1, yCol=yCol)[0],data.getSplitData2D(xCol=1,yCol=yCol)[1],data.getSplitData2D(xCol=1,yCol=yCol)[1],energy,specRad,specRad)))
+                            data.processData(self.noNegatives, yCol=2)
+                            data.processData(self.noNegatives, yCol=3)
+                            data.processData(self.noNegatives, yCol=5)
+                            data.processData(self.noNegatives, yCol=6)
+                            data.processData(self.normalize, yCol=2)
+                            data.processData(self.normalize, yCol=5)
+                            data.limitData(xLim=self.xLimOrig)
+                            self.dataProcessed=True
+                else:
+                    bg=fileToNpArray(self.bgfile, **self.fileFormat)[0][:,1]
+                    for device, validYCol in zip(self.dataList, self.validYTable):
+                        for data, yCol in zip(device,validYCol):
+                            try:
+                                energy,specRad=self.wavelengthToEV(data.getSplitData2D(xCol=1, yCol=yCol)[0], data.getSplitData2D(xCol=1,yCol=yCol)[1]- bg)
+                                data.setData(Data.mergeData((data.getSplitData2D(xCol=1, yCol=yCol)[0], data.getSplitData2D(xCol=1,yCol=yCol)[1]- bg,data.getSplitData2D(xCol=1,yCol=yCol)[1]- bg,energy,specRad,specRad)))
+                            except (IndexError,TypeError):
+                                energy,specRad=self.wavelengthToEV(*data.getSplitData2D(xCol=1, yCol=yCol))
+                                data.setData(Data.mergeData((data.getSplitData2D(xCol=1, yCol=yCol)[0],data.getSplitData2D(xCol=1,yCol=yCol)[1],data.getSplitData2D(xCol=1,yCol=yCol)[1],energy,specRad,specRad)))
+                            data.processData(self.noNegatives, yCol=2)
+                            data.processData(self.noNegatives, yCol=3)
+                            data.processData(self.noNegatives, yCol=5)
+                            data.processData(self.noNegatives, yCol=6)
+                            data.processData(self.normalize, yCol=2)
+                            data.processData(self.normalize, yCol=5)
+                            data.limitData(xLim=self.xLimOrig)
+                            self.dataProcessed=True
             else:
-                bg=fileToNpArray(self.bgfile, **self.fileFormat)[0][:,1]
-                for device in self.dataList:
-                    for data, yCol in zip(device,self.validYCol):
-                        try:
-                            energy,specRad=self.wavelengthToEV(data.getSplitData2D(xCol=1, yCol=yCol)[0], data.getSplitData2D(xCol=1,yCol=yCol)[1]- bg)
-                            data.setData(Data.mergeData((data.getSplitData2D(xCol=1, yCol=yCol)[0], data.getSplitData2D(xCol=1,yCol=yCol)[1]- bg,data.getSplitData2D(xCol=1,yCol=yCol)[1]- bg,energy,specRad,specRad)))
-                        except (IndexError,TypeError):
-                            energy,specRad=self.wavelengthToEV(*data.getSplitData2D(xCol=1, yCol=yCol))
-                            data.setData(Data.mergeData((data.getSplitData2D(xCol=1, yCol=yCol)[0],data.getSplitData2D(xCol=1,yCol=yCol)[1],data.getSplitData2D(xCol=1,yCol=yCol)[1],energy,specRad,specRad)))
-                        data.processData(self.noNegatives, yCol=2)
-                        data.processData(self.noNegatives, yCol=3)
-                        data.processData(self.noNegatives, yCol=5)
-                        data.processData(self.noNegatives, yCol=6)
-                        data.processData(self.normalize, yCol=2)
-                        data.processData(self.normalize, yCol=5)
-                        data.limitData(xLim=self.xLimOrig)
-                        self.dataProcessed=True
+                if self.bgfile is None:
+                    for device in self.dataList:
+                        for data, yCol, bg in zip(device, self.validYCol, self.bgYCol):
+                            try:
+                                energy,specRad=self.wavelengthToEV(data.getSplitData2D(xCol=1, yCol=yCol)[0], data.getSplitData2D(xCol=1,yCol=yCol)[1]- data.getSplitData2D(xCol=1,yCol=bg)[1])
+                                data.setData(Data.mergeData((data.getSplitData2D(xCol=1, yCol=yCol)[0], data.getSplitData2D(xCol=1,yCol=yCol)[1]- data.getSplitData2D(xCol=1,yCol=bg)[1],data.getSplitData2D(xCol=1,yCol=yCol)[1]- data.getSplitData2D(xCol=1,yCol=bg)[1],energy,specRad,specRad)))
+                            except (IndexError,TypeError):
+                                energy,specRad=self.wavelengthToEV(*data.getSplitData2D(xCol=1, yCol=yCol))
+                                data.setData(Data.mergeData((data.getSplitData2D(xCol=1, yCol=yCol)[0],data.getSplitData2D(xCol=1,yCol=yCol)[1],data.getSplitData2D(xCol=1,yCol=yCol)[1],energy,specRad,specRad)))
+                            data.processData(self.noNegatives, yCol=2)
+                            data.processData(self.noNegatives, yCol=3)
+                            data.processData(self.noNegatives, yCol=5)
+                            data.processData(self.noNegatives, yCol=6)
+                            data.processData(self.normalize, yCol=2)
+                            data.processData(self.normalize, yCol=5)
+                            data.limitData(xLim=self.xLimOrig)
+                            self.dataProcessed=True
+                else:
+                    bg=fileToNpArray(self.bgfile, **self.fileFormat)[0][:,1]
+                    for device in self.dataList:
+                        for data, yCol in zip(device,self.validYCol):
+                            try:
+                                energy,specRad=self.wavelengthToEV(data.getSplitData2D(xCol=1, yCol=yCol)[0], data.getSplitData2D(xCol=1,yCol=yCol)[1]- bg)
+                                data.setData(Data.mergeData((data.getSplitData2D(xCol=1, yCol=yCol)[0], data.getSplitData2D(xCol=1,yCol=yCol)[1]- bg,data.getSplitData2D(xCol=1,yCol=yCol)[1]- bg,energy,specRad,specRad)))
+                            except (IndexError,TypeError):
+                                energy,specRad=self.wavelengthToEV(*data.getSplitData2D(xCol=1, yCol=yCol))
+                                data.setData(Data.mergeData((data.getSplitData2D(xCol=1, yCol=yCol)[0],data.getSplitData2D(xCol=1,yCol=yCol)[1],data.getSplitData2D(xCol=1,yCol=yCol)[1],energy,specRad,specRad)))
+                            data.processData(self.noNegatives, yCol=2)
+                            data.processData(self.noNegatives, yCol=3)
+                            data.processData(self.noNegatives, yCol=5)
+                            data.processData(self.noNegatives, yCol=6)
+                            data.processData(self.normalize, yCol=2)
+                            data.processData(self.normalize, yCol=5)
+                            data.limitData(xLim=self.xLimOrig)
+                            self.dataProcessed=True
                 
         return self.dataList
     
@@ -298,44 +337,45 @@ class SpectraPlot(Plot):
             #ax.annotate(s="CsPbBr\\textsubscript{3}- Emission at 511\,nm", size=self.customFontsize[2], xy=(511,0.9), xytext=(550,0.7), arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", linewidth=mpl.rcParams["lines.linewidth"]))
         #try:
         for n in range(0,len(self.expectData)):
-            if self.fitterList[n] is not None:
-                if type(self.fitterList[n]) is list:
-                    for fitter in self.fitterList[n]:
-                        if fitter.function == self.doubleGauss:
-                            self.plotDoubleGauss(fitter,n)
-                        if fitter.function == self.tripleGauss:
-                            self.plotTripleGauss(fitter,n)
+            try:
+                if self.fitterList[n] is not None:
+                    if type(self.fitterList[n]) is list:
+                        for fitter in self.fitterList[n]:
+                            if fitter.function == self.doubleGauss:
+                                self.plotDoubleGauss(fitter,n)
+                            if fitter.function == self.tripleGauss:
+                                self.plotTripleGauss(fitter,n)
+                            #annotation
+                            if fitter.desc != None:
+                                if self.xCol!=4:
+                                    se=fitter.desc.format(np.round(fitter.params[self.xParamPos]))
+                                else:
+                                    try:
+                                           se=fitter.desc.format(np.round(self.convFac/fitter.params[self.xParamPos],decimals=0),np.round(fitter.params[self.xParamPos],decimals=1))
+                                    except IndexError:
+                                        se=fitter.desc.format(np.round(self.convFac/fitter.params[self.xParamPos]))
+                                ax.annotate(s=se, size=self.customFontsize[2], xy=(fitter.params[self.xParamPos],np.amax(fitter.CurveData.getSplitData2D()[1])-0.1*np.amax(fitter.CurveData.getSplitData2D()[1])), xytext=fitter.textPos, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n], edgecolor=self.fitColors[n], linewidth=mpl.rcParams["lines.linewidth"]))
+                    else:
+                        if self.fitterList[n].function == self.doubleGauss:
+                            self.plotDoubleGauss(self.fitterList[n],n)
+                        if self.fitterList[n].function == self.tripleGauss:
+                            self.plotTripleGauss(self.fitterList[n],n)
                         #annotation
-                        if fitter.desc != None:
+                        if self.fitterList[n].desc != None:
+                            fitter=self.fitterList[n]
                             if self.xCol!=4:
                                 se=fitter.desc.format(np.round(fitter.params[self.xParamPos]))
                             else:
                                 try:
-                                       se=fitter.desc.format(np.round(self.convFac/fitter.params[self.xParamPos],decimals=0),np.round(fitter.params[self.xParamPos],decimals=1))
+                                    se=fitter.desc.format(np.round(self.convFac/fitter.params[self.xParamPos],decimals=0),np.round(fitter.params[self.xParamPos],decimals=1))
                                 except IndexError:
-                                    se=fitter.desc.format(np.round(self.convFac/fitter.params[self.xParamPos]))
-                            ax.annotate(s=se, size=self.customFontsize[2], xy=(fitter.params[self.xParamPos],np.amax(fitter.CurveData.getSplitData2D()[1])-0.1*np.amax(fitter.CurveData.getSplitData2D()[1])), xytext=fitter.textPos, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n], edgecolor=self.fitColors[n], linewidth=mpl.rcParams["lines.linewidth"]))
-                else:
-                    if self.fitterList[n].function == self.doubleGauss:
-                        self.plotDoubleGauss(self.fitterList[n],n)
-                    if self.fitterList[n].function == self.tripleGauss:
-                        self.plotTripleGauss(self.fitterList[n],n)
-                    #annotation
-                    if self.fitterList[n].desc != None:
-                        fitter=self.fitterList[n]
-                        if self.xCol!=4:
-                            se=fitter.desc.format(np.round(fitter.params[self.xParamPos]))
-                        else:
-                            try:
-                                se=fitter.desc.format(np.round(self.convFac/fitter.params[self.xParamPos],decimals=0),np.round(fitter.params[self.xParamPos],decimals=1))
-                            except IndexError:
-                                se=fitter.desc.format(np.round(self.convFac/fitter.params[self.xParamPos],decimals=0))
-                        sze=self.customFontsize[2]
-                        xsy=(fitter.params[self.xParamPos],np.amax(fitter.CurveData.getSplitData2D()[1])-0.1*np.amax(fitter.CurveData.getSplitData2D()[1]))
-                        arprps=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n], edgecolor=self.fitColors[n], linewidth=mpl.rcParams["lines.linewidth"])
-                        ax.annotate(s=se, size=sze, xy=xsy, xytext=fitter.textPos, arrowprops=arprps)
-        #except Exception as e:
-            #warnings.warn(str(e))
+                                    se=fitter.desc.format(np.round(self.convFac/fitter.params[self.xParamPos],decimals=0))
+                            sze=self.customFontsize[2]
+                            xsy=(fitter.params[self.xParamPos],np.amax(fitter.CurveData.getSplitData2D()[1])-0.1*np.amax(fitter.CurveData.getSplitData2D()[1]))
+                            arprps=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n], edgecolor=self.fitColors[n], linewidth=mpl.rcParams["lines.linewidth"])
+                            ax.annotate(s=se, size=sze, xy=xsy, xytext=fitter.textPos, arrowprops=arprps)
+            except Exception as e:
+                pass
                 
 
 

@@ -248,6 +248,7 @@ class Plot():
                  concentenate_files_instead_of_avg=False,
                  no_plot=False,
                  useTex=True,
+                 partialFitLabels=[],
                  #ax_aspect='auto',
                 ):
         #static inits
@@ -339,7 +340,11 @@ class Plot():
         self.fig_width_pt=fig_width_pt
         self.legendEdgeSize=legendEdgeSize*scaleX
         self.colorOffset=colorOffset
-        self.showErrorOnlyEvery=showErrorOnlyEvery
+        try:
+            showErrorOnlyEvery[0]
+            self.showErrorOnlyEvery=showErrorOnlyEvery
+        except:       
+            self.showErrorOnlyEvery=[showErrorOnlyEvery]*len(fileList)
         self.erroralpha=erroralpha
         self.ax2erroralpha=ax2erroralpha
         self.erroralphabar=erroralphabar
@@ -397,6 +402,7 @@ class Plot():
         self.filenamePrefix=filenamePrefix
         self.concentenate_files_instead_of_avg=concentenate_files_instead_of_avg
         self.no_plot=no_plot
+        self.partialFitLabels=partialFitLabels
         #self.ax_aspect=ax_aspect
         #inits
         #if mpl_use == "pgf":
@@ -719,7 +725,9 @@ class Plot():
             logErrMin=[np.nan_to_num(np.minimum(err, mind), nan=0, posinf=0, neginf=0) for err,mind in zip(symErr,minErr)]
             logErrMax=[np.nan_to_num(np.minimum(err, maxi), nan=0, posinf=0, neginf=0) for err,maxi in zip(symErr,maxErr)]
             # if any error is as high that the bar would reach zero, set it to zero
-            logErrMin=np.asarray([[[errv if value>errv else 0.0 for errv,value in zip(errv_row,value_row)] for errv_row,value_row in zip(err,expect.getData())] for err,expect in zip(logErrMin, expectData)])
+            logErrMin=np.asarray([np.asarray([np.asarray([errv if value>errv else 0.0 for errv,value in zip(errv_row,value_row)]) for errv_row,value_row in zip(err,expect.getData())]) for err,expect in zip(logErrMin, expectData)])
+            values=np.asarray([np.asarray([np.asarray([value for errv,value in zip(errv_row,value_row)]) for errv_row,value_row in zip(err,expect.getData())]) for err,expect in zip(logErrMin, expectData)])
+            errvs=np.asarray([np.asarray([np.asarray([errv for errv,value in zip(errv_row,value_row)]) for errv_row,value_row in zip(err,expect.getData())]) for err,expect in zip(logErrMin, expectData)])
         except ValueError:
             warnings.warn("Unsupported Input for Error estimation given")
             logErrMin=[np.zeros(expect.getData().shape) for expect in expectData]
@@ -786,12 +794,12 @@ class Plot():
         ax2=self.ax2
         if self.iterLinestyles:
             linestyles=self.linestyles
-            linestyleOffset=self.linestyleOffset
+            ax2linestyles=self.linestyles[::-self.linstyleOffset]
             ax1color=[self.ax1color]*len(expectData)
             ax2color=[self.ax2color]*len(expectData)
         else:
             linestyles=[self.ls]*len(expectData)
-            linestyleOffset=0
+            ax2linestyles=[self.ax2ls]*len(expectData)
             ax1color=self.colors
             ax2color=self.colors
         for n in range(0,len(expectData)):
@@ -802,10 +810,10 @@ class Plot():
             if self.show[n][0]:
                 if self.errors[n][0]:
                     try:
-                        AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol), yerr=[self.logErr[self.errorTypeDown][n][:,showCol-1],self.logErr[self.errorTypeUp][n][:,showCol-1]], c=ax1color[n], capsize=self.capsize, capthick=self.capthick , ls=linestyles[n], label=labelY, errorevery=self.showErrorOnlyEvery)
+                        AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol), yerr=[self.logErr[self.errorTypeDown][n][:,showCol-1],self.logErr[self.errorTypeUp][n][:,showCol-1]], c=ax1color[n], capsize=self.capsize, capthick=self.capthick , ls=linestyles[n], label=labelY, errorevery=self.showErrorOnlyEvery[n])
                     except TypeError:
                         for singleShowCol,singleLabelY in zip(showCol,labelY):
-                            AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=singleShowCol), yerr=[self.logErr[self.errorTypeDown][n][:,showCol-1],self.logErr[self.errorTypeUp][n][:,showCol-1]], c=ax1color[n], capsize=self.capsize, capthick=self.capthick , ls=linestyles[n], label=singleLabelY, errorevery=self.showErrorOnlyEvery)
+                            AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=singleShowCol), yerr=[self.logErr[self.errorTypeDown][n][:,showCol-1],self.logErr[self.errorTypeUp][n][:,showCol-1]], c=ax1color[n], capsize=self.capsize, capthick=self.capthick , ls=linestyles[n], label=singleLabelY, errorevery=self.showErrorOnlyEvery[n])
                 else:
                     try:
                         AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol), c=ax1color[n], ls=linestyles[n], label=labelY)
@@ -835,16 +843,16 @@ class Plot():
                         labelZ=[labels[n]+" "+self.showColLabel[singleShowCol2] for singleShowCol2 in showCol2]
                 if self.errors[n][1]:
                     try:
-                        AX2=ax2.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol2), yerr=[self.logErr[self.ax2errorTypeDown][n][:,showCol2-1],self.logErr[self.ax2errorTypeUp][n][:,showCol2-1]], capsize=self.capsize, capthick=self.capthick, c=ax2color[n], ls=linestyles[n+linestyleOffset], label=labelZ,  errorevery=self.showErrorOnlyEvery)
+                        AX2=ax2.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol2), yerr=[self.logErr[self.ax2errorTypeDown][n][:,showCol2-1],self.logErr[self.ax2errorTypeUp][n][:,showCol2-1]], capsize=self.capsize, capthick=self.capthick, c=ax2color[n], ls=ax2linestyles[n], label=labelZ,  errorevery=self.showErrorOnlyEvery[n])
                     except TypeError:
                         for singleShowCol2,singleLabelZ in zip(showCol2,labelZ):
-                            AX2=ax2.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=singleShowCol2), yerr=[self.logErr[self.ax2errorTypeDown][n][:,showCol2-1],self.logErr[self.ax2errorTypeUp][n][:,showCol2-1]], capsize=self.capsize, capthick=self.capthick, c=ax2color[n], ls=linestyles[n+linestyleOffset], label=singleLabelZ,  errorevery=self.showErrorOnlyEvery)
+                            AX2=ax2.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=singleShowCol2), yerr=[self.logErr[self.ax2errorTypeDown][n][:,showCol2-1],self.logErr[self.ax2errorTypeUp][n][:,showCol2-1]], capsize=self.capsize, capthick=self.capthick, c=ax2color[n], ls=ax2linestyles[n], label=singleLabelZ,  errorevery=self.showErrorOnlyEvery[n])
                 else:
                     try:
-                        AX2=ax2.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol2), c=ax2color[n], ls=linestyles[n+linestyleOffset], label=labelZ)
+                        AX2=ax2.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol2), c=ax2color[n], ls=ax2linestyles[n], label=labelZ)
                     except TypeError:
                         for singleShowCol2,singleLabelZ in zip(showCol2,labelZ):
-                            AX2=ax2.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=singleShowCol2), c=ax2color[n], ls=linestyles[n+linestyleOffset], label=singleLabelZ)
+                            AX2=ax2.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=singleShowCol2), c=ax2color[n], ls=ax2linestyles[n], label=singleLabelZ)
                 if self.fitList is not None and self.fitterList[n] is not None:
                     if type(self.fitterList[n]) is list:
                         for fitter in self.fitterList[n]:
@@ -868,7 +876,6 @@ class Plot():
                 for b in AX2[2]:
                     b.set_alpha(self.ax2erroralphabar)
 
-              
     def doPlot(self):
         import matplotlib.pyplot
         if not self.no_plot:
@@ -936,7 +943,7 @@ class Plot():
                 handles=handles+handles2
                 labels=labels+labels2
             if self.fitList is not None and not self.showFitInLegend:
-                index_list = [True if x not in self.fitLabels else False for x in labels]
+                index_list = [True if x not in self.fitLabels+self.partialFitLabels else False for x in labels]
                 labels = [l for l,index in zip(labels,index_list) if index]
                 handles = [h for h,index in zip(handles,index_list) if index]
             if self.legendBool:

@@ -94,6 +94,12 @@ class OLEDPlot(Plot):
         return deriv
     
     @classmethod
+    def removeZeros(cls, cur_a):
+        minVal=5*10**-12
+        cur_o=[cur if cur != 0.0 else minVal for cur in cur_a]
+        return cur_o
+    
+    @classmethod
     def generateFileList(cls, prefix, pixels=4, samples=4, fill="_", alphaOffset=0, truthTable=None, postfix=""):
         generatedList=[[prefix+fill+cls.chars[sample+alphaOffset]+postfix+fill+str(pixel+1) for pixel in range(0,pixels)] for sample in range(0,samples)]#
         if truthTable is None:
@@ -156,8 +162,10 @@ class OLEDPlot(Plot):
                  curIdeal=False,
                  lumThresh=0.1,
                  spec_bg_file=None,
+                 sweepOverride=None,
                  **kwargs
                 ):
+        self.sweepOverride=sweepOverride
         Plot.__init__(self, name, fileList, averageMedian=averageMedian, showColAxType=showColAxType, showColAxLim=showColAxLim, showColLabel=showColLabel, showColLabelUnit=showColLabelUnit, showColLabelUnitNoTex=showColLabelUnitNoTex,fileFormat=fileFormat, legLoc=legLoc, **kwargs)
         #dyn inits
         self.pixelsize_mm2=pixelsize_mm2
@@ -199,15 +207,22 @@ class OLEDPlot(Plot):
         self.spectralDataList=self.spectraDataImport()[0]
         self.diodeData=self.spectraDataImport()[1]
 
+
     
                       
     def spectraDataImport(self):
         bg=self.specBg
-        yCol=self.specYCol
+
         diodeFuncData=Data(fileToNpArray(self.photodiodeFunctionFile, **self.diodeDataFormat)[0])
         diodeFuncData.processData(Plot.normalize2, yCol=self.diodYCol)
         spectralDataList=[]
-        for spectraFile in self.spectraFiles:
+        for spectraFileTup in self.spectraFiles:
+            if type(spectraFileTup) == tuple or type(spectraFileTup) == list:
+                spectraFile=spectraFileTup[0]
+                yCol=spectraFileTup[1]
+            else:
+                spectraFile=spectraFileTup
+                yCol=self.specYCol
             try:
                 spectralData=Data(fileToNpArray(spectraFile, **self.spectralDataFormat)[0])
             except TypeError:
@@ -332,6 +347,7 @@ class OLEDPlot(Plot):
                     data.limitData(xLim=self.xLimOrig, xCol=self.xColOrig)
                     data.processData(self.remDarkCurr, yCol=3)
                     data.processData(OLEDPlot.absolute, yCol=2)
+                    data.processData(OLEDPlot.removeZeros, yCol=2)
                     if self.averageSweepBack and not self.noSweepBackMeasured:
                         array=data.getData()
                         array1=array[:int(len(array))//2]
@@ -391,6 +407,7 @@ class OLEDPlot(Plot):
                 data.limitData(xLim=self.xLimOrig, xCol=self.xColOrig)
                 data.processData(self.remDarkCurr, yCol=3)
                 data.processData(OLEDPlot.absolute, yCol=2)
+                data.processData(OLEDPlot.removeZeros, yCol=2)
                 if self.averageSweepBack and not self.noSweepBackMeasured:
                     array=data.getData()
                     array1=array[:int(len(array))//2]
@@ -447,8 +464,10 @@ class OLEDPlot(Plot):
     def importData(self):
         if not self.dataImported:
             if self.skipSweepBack and not self.averageSweepBack and not self.noSweepBackMeasured:
-                self.dataList=[[Data(fileToNpArray(pixel, **self.fileFormat)[0][:int(len(fileToNpArray(pixel, **self.fileFormat)[0])//2)], xCol=self.xCol, yCol=self.showCol) for pixel in device] for device in self.fileList]
-
+                if self.sweepOverride is not None:
+                    self.dataList=[[Data(fileToNpArray(pixel, **self.fileFormat)[0][:int(len(fileToNpArray(pixel, **self.fileFormat)[0])//2)], xCol=self.xCol, yCol=self.showCol) if not swOvR else Data(fileToNpArray(pixel, **self.fileFormat)[0], xCol=self.xCol, yCol=self.showCol) for pixel,swOvR in zip(device,swOv)] for device,swOv in zip(self.fileList,self.sweepOverride)]
+                else:
+                    self.dataList=[[Data(fileToNpArray(pixel, **self.fileFormat)[0][:int(len(fileToNpArray(pixel, **self.fileFormat)[0])//2)], xCol=self.xCol, yCol=self.showCol) for pixel in device] for device in self.fileList]
             else:
                 self.dataList=[[Data(fileToNpArray(pixel, **self.fileFormat)[0], xCol=self.xCol, yCol=self.showCol) for pixel in device] for device in self.fileList]
             #for dataSubList in self.dataList:
