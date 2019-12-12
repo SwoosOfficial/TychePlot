@@ -98,6 +98,7 @@ class SpectraPlot(Plot):
                  fitColors=['#1f77b4','#d62728','#2ca02c','#9467bd','#8c564b','#e377c2','#7f7f7f','#ff7f0e','#bcbd22','#17becf','#f8e520'],
                  bgfile=None,
                  validYTable=None,
+                 normalizeSpectra=True,
                  **kwargs
                 ):
         if rainbowMode:
@@ -114,6 +115,7 @@ class SpectraPlot(Plot):
         self.rainbowMode=rainbowMode
         self.bgfile=bgfile
         self.validYTable=validYTable
+        self.normalizeSpectra=normalizeSpectra
         #self.dataList=self.importData()
    
     def processFileName(self, option=".pdf"):
@@ -125,6 +127,9 @@ class SpectraPlot(Plot):
             string+=self.fill+"scaledWith{:03.0f}Pct".format(self.scaleX*100)
         if self.filenamePrefix is not None:
             string=self.filenamePrefix+string
+        if not self.normalizeSpectra:
+            string+=self.fill+"not"
+            string+=self.fill+"normalised"
         return string+option
     
     def processData(self):
@@ -143,8 +148,9 @@ class SpectraPlot(Plot):
                             data.processData(self.noNegatives, yCol=3)
                             data.processData(self.noNegatives, yCol=5)
                             data.processData(self.noNegatives, yCol=6)
-                            data.processData(self.normalize, yCol=2)
-                            data.processData(self.normalize, yCol=5)
+                            if self.normalizeSpectra:
+                                data.processData(self.normalize, yCol=2)
+                                data.processData(self.normalize, yCol=5)
                             data.limitData(xLim=self.xLimOrig)
                             self.dataProcessed=True
                 else:
@@ -161,8 +167,9 @@ class SpectraPlot(Plot):
                             data.processData(self.noNegatives, yCol=3)
                             data.processData(self.noNegatives, yCol=5)
                             data.processData(self.noNegatives, yCol=6)
-                            data.processData(self.normalize, yCol=2)
-                            data.processData(self.normalize, yCol=5)
+                            if self.normalizeSpectra:
+                                data.processData(self.normalize, yCol=2)
+                                data.processData(self.normalize, yCol=5)
                             data.limitData(xLim=self.xLimOrig)
                             self.dataProcessed=True
             else:
@@ -179,8 +186,9 @@ class SpectraPlot(Plot):
                             data.processData(self.noNegatives, yCol=3)
                             data.processData(self.noNegatives, yCol=5)
                             data.processData(self.noNegatives, yCol=6)
-                            data.processData(self.normalize, yCol=2)
-                            data.processData(self.normalize, yCol=5)
+                            if self.normalizeSpectra:
+                                data.processData(self.normalize, yCol=2)
+                                data.processData(self.normalize, yCol=5)
                             data.limitData(xLim=self.xLimOrig)
                             self.dataProcessed=True
                 else:
@@ -197,8 +205,9 @@ class SpectraPlot(Plot):
                             data.processData(self.noNegatives, yCol=3)
                             data.processData(self.noNegatives, yCol=5)
                             data.processData(self.noNegatives, yCol=6)
-                            data.processData(self.normalize, yCol=2)
-                            data.processData(self.normalize, yCol=5)
+                            if self.normalizeSpectra:
+                                data.processData(self.normalize, yCol=2)
+                                data.processData(self.normalize, yCol=5)
                             data.limitData(xLim=self.xLimOrig)
                             self.dataProcessed=True
                 
@@ -282,11 +291,18 @@ class SpectraPlot(Plot):
         self.ax.add_patch(polygon)
     
     
-    def rainbow_fill(self,X,Y, cmap=matplotlib.pyplot.get_cmap("nipy_spectral")):
+    def rainbow_fill(self,expectData, cmap=matplotlib.pyplot.get_cmap("nipy_spectral")):
+        X,Y = expectData[0].getSplitData2D()
         dx = X[1]-X[0]
         S  = 380 
         N  = 675
-        h = 0.01
+        if self.normalizeSpectra:
+            h = 0.01
+            p = -0.035
+        else:
+            maxi=np.amax(np.asarray([np.amax(expect.getSplitData2D()) for expect in expectData]))
+            h = 0.01*maxi
+            p = -0.035*maxi
         if not self.rainbowMode:
             for n, (x,y) in enumerate(zip(X,Y)):
                 if (x>N):
@@ -295,7 +311,7 @@ class SpectraPlot(Plot):
                     color= cmap(0)
                 else:
                     color = cmap(min((x-S)/(N-S),0.9999))
-                self.rect(x,-0.035,dx,h,color)
+                self.rect(x,p,dx,h,color)
         else:
             for n, (x,y) in enumerate(zip(X,Y)):
                 if (x>N):
@@ -327,7 +343,7 @@ class SpectraPlot(Plot):
     def afterPlot(self):
         ax=self.ax
         if self.xCol==1:
-            self.rainbow_fill(*self.expectData[0].getSplitData2D())
+            self.rainbow_fill(self.expectData)
             if self.rainbowMode:
                 ax.get_lines()[0].set_alpha(0)
             #ax.annotate(s="",xy=(503,0.5), xytext=(503-20,0.5), arrowprops=dict(arrowstyle="->", connectionstyle="arc3", shrinkA=0, shrinkB=0, linewidth=mpl.rcParams["lines.linewidth"]))
