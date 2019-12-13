@@ -465,7 +465,7 @@ class Plot():
                 "ytick.labelsize": self.customFontsize[4],
                 "text.usetex": True,    # use inline math for ticks
                 "pgf.rcfonts": False, 
-                "pgf.preamble": [r"\usepackage{amsmath}"]
+                "pgf.preamble": [r"\usepackage{amsmath}\usepackage{upgreek}"]
             }
         if self.customFontsize is not None and len(self.customFontsize) is 5:
             pgf_with_lualatex.update({
