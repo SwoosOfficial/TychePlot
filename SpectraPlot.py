@@ -5,7 +5,7 @@
 
 
 import matplotlib as mpl
-mpl.use("pgf")
+#mpl.use("pgf")
 import matplotlib.pyplot
 import numpy as np
 import scipy.interpolate as inter
@@ -49,9 +49,18 @@ class SpectraPlot(Plot):
         return np.maximum(a,np.zeros(len(a), dtype=np.float64))
     
     @classmethod
-    def normalize(cls,a):
+    def normalize(cls, a, value=None, col=None):
         b=a-np.amin(a)
-        return b/np.amax(b, axis=0)
+        if value is None:
+            return b/np.amax(b, axis=0)
+        try:
+            temp_trial=value[0]
+            c=[value]*len(b)
+            values_array=np.vstack(c)
+            return b/(values_array[:,col-1]-np.amin(a))
+        except:
+            return b/(value-np.amin(a))
+    
 
     @classmethod
     def gauss(cls, x, mu, amp, sigma):
@@ -98,7 +107,7 @@ class SpectraPlot(Plot):
                  fitColors=['#1f77b4','#d62728','#2ca02c','#9467bd','#8c564b','#e377c2','#7f7f7f','#ff7f0e','#bcbd22','#17becf','#f8e520'],
                  bgfile=None,
                  validYTable=None,
-                 normalizeSpectra=True,
+                 normalizeMode="single",
                  **kwargs
                 ):
         if rainbowMode:
@@ -115,7 +124,8 @@ class SpectraPlot(Plot):
         self.rainbowMode=rainbowMode
         self.bgfile=bgfile
         self.validYTable=validYTable
-        self.normalizeSpectra=normalizeSpectra
+        self.normalizeMode=normalizeMode
+        self.postprocess_normalization=False
         #self.dataList=self.importData()
    
     def processFileName(self, option=".pdf"):
@@ -127,10 +137,23 @@ class SpectraPlot(Plot):
             string+=self.fill+"scaledWith{:03.0f}Pct".format(self.scaleX*100)
         if self.filenamePrefix is not None:
             string=self.filenamePrefix+string
-        if not self.normalizeSpectra:
+        if self.normalizeMode is None:
             string+=self.fill+"not"
             string+=self.fill+"normalised"
+        if self.normalizeMode == "global":
+            string+=self.fill+"globally"
+            string+=self.fill+"normalised"
         return string+option
+    
+    def process_normalization(self):
+        if self.normalizeMode == 'single':
+            data.processData(self.normalize, yCol=2)
+            data.processData(self.normalize, yCol=5)
+            self.postprocess_normalization=False
+        elif self.normalizeMode == 'global':
+            self.postprocess_normalization=True
+        else:
+            return
     
     def processData(self):
         if not self.dataProcessed:
@@ -148,9 +171,7 @@ class SpectraPlot(Plot):
                             data.processData(self.noNegatives, yCol=3)
                             data.processData(self.noNegatives, yCol=5)
                             data.processData(self.noNegatives, yCol=6)
-                            if self.normalizeSpectra:
-                                data.processData(self.normalize, yCol=2)
-                                data.processData(self.normalize, yCol=5)
+                            self.process_normalization()
                             data.limitData(xLim=self.xLimOrig)
                             self.dataProcessed=True
                 else:
@@ -167,9 +188,7 @@ class SpectraPlot(Plot):
                             data.processData(self.noNegatives, yCol=3)
                             data.processData(self.noNegatives, yCol=5)
                             data.processData(self.noNegatives, yCol=6)
-                            if self.normalizeSpectra:
-                                data.processData(self.normalize, yCol=2)
-                                data.processData(self.normalize, yCol=5)
+                            self.process_normalization()
                             data.limitData(xLim=self.xLimOrig)
                             self.dataProcessed=True
             else:
@@ -186,9 +205,7 @@ class SpectraPlot(Plot):
                             data.processData(self.noNegatives, yCol=3)
                             data.processData(self.noNegatives, yCol=5)
                             data.processData(self.noNegatives, yCol=6)
-                            if self.normalizeSpectra:
-                                data.processData(self.normalize, yCol=2)
-                                data.processData(self.normalize, yCol=5)
+                            self.process_normalization()
                             data.limitData(xLim=self.xLimOrig)
                             self.dataProcessed=True
                 else:
@@ -205,12 +222,20 @@ class SpectraPlot(Plot):
                             data.processData(self.noNegatives, yCol=3)
                             data.processData(self.noNegatives, yCol=5)
                             data.processData(self.noNegatives, yCol=6)
-                            if self.normalizeSpectra:
-                                data.processData(self.normalize, yCol=2)
-                                data.processData(self.normalize, yCol=5)
+                            self.process_normalization()
                             data.limitData(xLim=self.xLimOrig)
                             self.dataProcessed=True
-                
+        
+                if self.postprocess_normalization:
+                    maximum_values=[]
+                    for device in self.dataList:
+                        for data in device:
+                            maximum_values.append(data.getExtremValues(typus="max"))
+                    value=np.amax(np.asarray(maximum_values), axis=0)
+                    for device in self.dataList:
+                        for data in device:
+                            data.processData(self.normalize, yCol=2, value=value, col=2)
+                            data.processData(self.normalize, yCol=5, value=value, col=5)
         return self.dataList
     
     
@@ -296,7 +321,7 @@ class SpectraPlot(Plot):
         dx = X[1]-X[0]
         S  = 380 
         N  = 675
-        if self.normalizeSpectra:
+        if self.normalizeMode == "single" or self.normalizeMode == "global":
             h = 0.01
             p = -0.035
         else:
@@ -335,7 +360,7 @@ class SpectraPlot(Plot):
             return ticks
         
     def importData(self):
-        self.dataList=[[Data(fileToNpArray(pixel, **self.fileFormat)[0]) for pixel in device] for device in self.fileList]
+        self.dataList=[[Data(fileToNpArray(pixel, **self.fileFormat)[0], desc=fileToNpArray(pixel, **self.fileFormat)[1]) for pixel in device] for device in self.fileList]
         return self.dataList
     
     
