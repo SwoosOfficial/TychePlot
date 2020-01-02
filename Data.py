@@ -38,6 +38,17 @@ class Data:
         ydata=np.asarray(data[:,yCol-1])
         return xdata, ydata
     
+    def setSplitData2D(self, xy_tup, xCol=0, yCol=0):
+        #data = self.getData()
+        if xCol == 0:
+            xCol=self.xCol
+        if yCol == 0:
+            yCol=self.yCol
+        xdata=xy_tup[0]
+        ydata=xy_tup[1]
+        self.__data[:,xCol-1]=xdata
+        self.__data[:,yCol-1]=ydata
+    
     @classmethod
     def initData2D(cls, xdata, ydata):
         a=np.asarray([xdata,ydata], dtype=np.float64)
@@ -152,12 +163,29 @@ class Data:
                     data=data[(data[:,self.yCol-1]<yLim[0]) & (data[:,self.yCol-1]>yLim[1])]
         self.setData(data)
         
-    def getExtremValue(self, feature=1):
+    def getExtremValue(self, feature=1, typus="min"):
         if (feature == 0) or (feature == 1):
             a=self.getSplitData2D()[feature]
-            return np.amin(a)
+            if typus=="min":
+                return np.amin(a)
+            elif typus=="max":
+                return np.amax(a)
+            else:
+                raise NotYetImplementedError
         else:
             return 0
+        
+    def getExtremValues(self, typus="min"):
+        result=[]
+        for feature in range(0, len(self.__data[0])):
+            a=self.getSplitData2D(yCol=feature+1)[1]
+            if typus=="min":
+                result.append(np.amin(a))
+            elif typus=="max":
+                result.append(np.amax(a))
+            else:
+                raise NotYetImplementedError
+        return result
         
     
     def getFirstIndexWhereGreaterOrEq(self,column,value,tolerance=0):
