@@ -6,9 +6,10 @@
 pgfSys="lualatex"
 
 import matplotlib as mpl
-mpl.use("pgf")
+#mpl.use("pgf")
 import numpy as np
 import scipy.interpolate as inter
+import matplotlib.pyplot
 import copy
 import sys
 import os
@@ -22,6 +23,7 @@ from matplotlib import rc
 from Filereader import fileToNpArray
 from Data import Data
 from Fitter import Fitter
+
 
 
 # In[2]:
@@ -67,6 +69,12 @@ class Plot():
                    dataImported=True,
                    **kwargs
                    )
+    @classmethod
+    def create_line_string(cls, line,sep):
+        string=""
+        for element in line:
+            string+=str(element)+sep
+        return string[:-len(sep)]
     
     def concentenate_files(self, fileList):
         try:
@@ -93,7 +101,7 @@ class Plot():
         return con_filename
         
     
-    def __initFileList(self, fileList, errors, labels, show, fitLabels):
+    def __initFileList(self, fileList, errors, labels, show, fitLabels, showLines, showMarkers):
         if self.overrideFileList:
             self.fileList=[]
             self.errors=[]
@@ -166,6 +174,14 @@ class Plot():
                 self.fitLabels=["Fit of "+label for label in self.labels]
             else:
                 self.fitLabels=fitLabels
+            if isinstance(showLines,list):
+                self.showLines=showLines
+            else:
+                self.showLines=[[showLines,showLines] for device in self.fileList]
+            if isinstance(showMarkers,list):
+                self.showMarkers=showMarkers
+            else:
+                self.showMarkers=[[showMarkers,showMarkers] for device in self.fileList]    
 
     def __init__(self,
                  name,
@@ -194,8 +210,11 @@ class Plot():
                  showColAxLim=[None,None,None,None],
                  colors=['#1f77b4','#d62728','#2ca02c','#9467bd','#8c564b','#e377c2','#7f7f7f','#ff7f0e','#bcbd22','#17becf','#f8e520'],
                  linestyles=["-","--",":","-."],
+                 markers=["o","^","s","p","P","*"],
                  iterLinestyles=False,
                  linestyleOffset=0,
+                 iterMarkers=False,
+                 markerOffset=0,
                  showColLabel=None,
                  showColLabelUnitNoTex=[None,"X","Y","Y2"],
                  showColLabelUnit=[None,"X","Y","Y2"],
@@ -217,7 +236,9 @@ class Plot():
                  ax2errorTypeUp=1,
                  ax2errorTypeDown=1,
                  ls="-",
+                 mk="o",
                  ax2ls="--",
+                 ax2mk="^",
                  ax2LegendLabelAddString="",
                  overrideErrorTypes=False,
                  overrideFileList=False,
@@ -249,12 +270,17 @@ class Plot():
                  no_plot=False,
                  useTex=True,
                  partialFitLabels=[],
+                 showLines=True,
+                 showMarkers=False,
+                 markerSize=6.0,
                  #ax_aspect='auto',
                 ):
         #static inits
+        self.fig=None
         self.ax=None
         self.ax2=None
         self.axX2=None
+        self.alreadyFitted=False
         #dyn inits
         self.fileFormat=fileFormat
         if len(showColTup) is not 2:
@@ -357,7 +383,10 @@ class Plot():
         self.ax2errorTypeDown=ax2errorTypeDown
         self.iterLinestyles=iterLinestyles
         self.linestyles=linestyles
+        self.markers=markers
         self.linestyleOffset=linestyleOffset
+        self.iterMarkers=iterMarkers
+        self.markerOffset=markerOffset
         if iterLinestyles:
             self.ls=linestyles[0]
             self.ax2ls=linestyles[0]
@@ -366,6 +395,14 @@ class Plot():
         else:
             self.ls=ls
             self.ax2ls=ax2ls
+        if iterMarkers:    
+            self.mk=markers[0]
+            self.ax2mk=markers[0]
+            self.ax1color=colors[0]
+            self.ax2color=colors[1]
+        else:
+            self.mk=mk
+            self.ax2mk=ax2mk
         self.overrideErrorTypes=overrideErrorTypes
         self.overrideFileList=overrideFileList
         self.filename=filename
@@ -403,6 +440,7 @@ class Plot():
         self.concentenate_files_instead_of_avg=concentenate_files_instead_of_avg
         self.no_plot=no_plot
         self.partialFitLabels=partialFitLabels
+        self.markerSize=markerSize
         #self.ax_aspect=ax_aspect
         #inits
         #if mpl_use == "pgf":
@@ -410,9 +448,9 @@ class Plot():
         #else:
         #    self.mpl_tex = False
         if newFileList is not None:
-            self.__initFileList(newFileList, errors, labels, show, fitLabels)
+            self.__initFileList(newFileList, errors, labels, show, fitLabels, showLines, showMarkers)
         else:
-            self.__initFileList(fileList, errors, labels, show, fitLabels)
+            self.__initFileList(fileList, errors, labels, show, fitLabels, showLines, showMarkers)
         self.dataList=self.__importData()
 
         
@@ -439,7 +477,6 @@ class Plot():
         return fig_size
 
     def _newFig(self):
-        import matplotlib.pyplot
         matplotlib.pyplot.clf()
         self.__initTex(customFontsize=self.customFontsize)
         fig = matplotlib.pyplot.figure(figsize=self._figsize())
@@ -465,7 +502,8 @@ class Plot():
                 "ytick.labelsize": self.customFontsize[4],
                 "text.usetex": True,    # use inline math for ticks
                 "pgf.rcfonts": False, 
-                "pgf.preamble": [r"\usepackage{amsmath}\usepackage{upgreek}"]
+                "pgf.preamble": [r"\usepackage{amsmath}\usepackage{upgreek}"],
+                "lines.markersize": self.markerSize
             }
         if self.customFontsize is not None and len(self.customFontsize) is 5:
             pgf_with_lualatex.update({
@@ -567,6 +605,8 @@ class Plot():
      
     def _scaleRcParams(self):
         mpl.rcParams["lines.linewidth"]=self.scaleX*mpl.rcParams["lines.linewidth"]
+        mpl.rcParams["lines.markeredgewidth"]=self.scaleX*mpl.rcParams["lines.markeredgewidth"]
+        mpl.rcParams["lines.markersize"]=self.scaleX*mpl.rcParams["lines.markersize"]
         mpl.rcParams['axes.linewidth'] = self.scaleX*mpl.rcParams["axes.linewidth"]
         mpl.rcParams['xtick.major.size'] = self.scaleX*mpl.rcParams['xtick.major.size']
         mpl.rcParams['xtick.major.width'] = self.scaleX*mpl.rcParams['xtick.major.width']
@@ -585,6 +625,8 @@ class Plot():
         
     def _rescaleRcParams(self):
         mpl.rcParams["lines.linewidth"]=1/self.scaleX*mpl.rcParams["lines.linewidth"]
+        mpl.rcParams["lines.markeredgewidth"]=1/self.scaleX*mpl.rcParams["lines.markeredgewidth"]
+        mpl.rcParams["lines.markersize"]=1/self.scaleX*mpl.rcParams["lines.markersize"]
         mpl.rcParams['axes.linewidth'] = 1/self.scaleX*mpl.rcParams["axes.linewidth"]
         mpl.rcParams['xtick.major.size'] = 1/self.scaleX*mpl.rcParams['xtick.major.size']
         mpl.rcParams['xtick.major.width'] = 1/self.scaleX*mpl.rcParams['xtick.major.width']
@@ -604,7 +646,6 @@ class Plot():
     
     
     def saveFig(self):
-        import matplotlib.pyplot
         if self.useTex:
             matplotlib.pyplot.savefig(self.processFileName(option=".pdf"), bbox_inches='tight')
             matplotlib.pyplot.savefig(self.processFileName(option=".pgf"), bbox_inches='tight')
@@ -629,7 +670,7 @@ class Plot():
         
     def __importData(self):
         if not self.dataImported:
-            self.dataList=[[Data(fileToNpArray(measurement, **self.fileFormat)[0], xCol=self.xCol, yCol=self.showCol) for measurement in sample] for sample in self.fileList]
+            self.dataList=[[Data(fileToNpArray(measurement, **self.fileFormat)[0], desc=fileToNpArray(measurement, **self.fileFormat)[1], xCol=self.xCol, yCol=self.showCol) for measurement in sample] for sample in self.fileList]
         return self.dataList
     
     def processData(self):
@@ -651,13 +692,15 @@ class Plot():
         try:
             qtyCol=len(dataList[0][0].getData()[0])
             dataColList=[[[data.getData()[:,m] for data in deviceData] for deviceData in dataList] for m in range(0,qtyCol)]
+            descList=[deviceData[0].desc for deviceData in dataList]
             avgColList=[[np.average(element, axis=0) for element in column] for column in dataColList]
             avgList=[[avgColList[m][n] for m in range(0,qtyCol)] for n in range(0,len(dataList))]
             avgDataList=[Data.mergeData(avgData) for avgData in avgList]
             devDataList=[np.sqrt(np.sum([np.square(np.subtract(data,tempData.getData())) for tempData in deviceData],axis=0)/len(deviceData)) for data, deviceData in zip(avgDataList, dataList)]
-            avgData=[Data(data, xCol=self.xCol, yCol=self.showCol) for data in avgDataList]
+            avgData=[Data(data, desc=desc, xCol=self.xCol, yCol=self.showCol) for data,desc in zip(avgDataList,descList)]
             devData=[Data(data, xCol=self.xCol, yCol=self.showCol) for data in devDataList]
         except (ValueError,IndexError):
+            throw
             warnings.warn("Unsupported Input for Error estimation given")
             avgData, devData = self.concentenate_data()
         return avgData, devData
@@ -672,11 +715,12 @@ class Plot():
         try:
             qtyCol=len(dataList[0][0].getData()[0])
             dataColList=[[[data.getData()[:,m] for data in deviceData] for deviceData in dataList] for m in range(0,qtyCol)]
+            descList=[deviceData[0].desc for deviceData in dataList]
             medColList=[[np.median(element, axis=0) for element in column] for column in dataColList]
             medList=[[medColList[m][n] for m in range(0,qtyCol)] for n in range(0,len(dataList))]
             medDataList=[Data.mergeData(medData) for medData in medList]
             devDataList=[np.sqrt(np.sum([np.square(np.subtract(data,tempData.getData())) for tempData in deviceData],axis=0)/len(deviceData)) for data, deviceData in zip(medDataList, dataList)]
-            medData=[Data(data, xCol=self.xCol, yCol=self.showCol) for data in medDataList]
+            medData=[Data(data, desc=desc, xCol=self.xCol, yCol=self.showCol) for data,desc in zip(medDataList,descList)]
             devData=[Data(data, xCol=self.xCol, yCol=self.showCol) for data in devDataList]
         except (ValueError,IndexError):
             warnings.warn("Unsupported Input for Error estimation given")
@@ -782,8 +826,7 @@ class Plot():
     def afterPlot(self):
         return
     
-    def processPlot(self):
-        expectData=self.processAverage()[0]
+    def processPlotSub(self, n, ls, mk, ax2ls, ax2mk, ax1color, ax2color, data):
         colors=self.colors
         labels=self.labels
         xCol=self.xCol
@@ -792,94 +835,133 @@ class Plot():
         colorOffset=self.colorOffset
         ax=self.ax
         ax2=self.ax2
+        linestyles=ls
+        markerstyles=mk
+        ax2linestyles=ax2ls
+        ax2markerstyles=ax2mk
+        expectData=data
+        try:
+              labelY=labels[n]+" "+self.showColLabel[self.showCol]
+        except TypeError:
+            labelY=[labels[n]+" "+self.showColLabel[singleShowCol] for singleShowCol in self.showCol]
+        if self.show[n][0]:
+            if self.errors[n][0]:
+                try:
+                    AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol), yerr=[self.logErr[self.errorTypeDown][n][:,showCol-1],self.logErr[self.errorTypeUp][n][:,showCol-1]], c=ax1color[n], capsize=self.capsize, capthick=self.capthick , ls=linestyles[n], marker=markerstyles[n], label=labelY, errorevery=self.showErrorOnlyEvery[n])
+                except TypeError:
+                    for singleShowCol,singleLabelY in zip(showCol,labelY):
+                        AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=singleShowCol), yerr=[self.logErr[self.errorTypeDown][n][:,showCol-1],self.logErr[self.errorTypeUp][n][:,showCol-1]], c=ax1color[n], capsize=self.capsize, capthick=self.capthick , ls=linestyles[n], marker=markerstyles[n], label=singleLabelY, errorevery=self.showErrorOnlyEvery[n])
+            else:
+                try:
+                    AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol), c=ax1color[n], ls=linestyles[n], marker=markerstyles[n], label=labelY)
+                except TypeError:
+                    for singleShowCol,singleLabelY in zip(showCol,labelY):
+                        AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=singleShowCol), c=ax1color[n], ls=linestyles[n], marker=markerstyles[n], label=singleLabelY)
+            if self.fitList is not None and self.fitterList[n] is not None:
+                if type(self.fitterList[n]) is list:
+                    for fitter in self.fitterList[n]:
+                        FIT=ax.errorbar(*fitter.CurveData.getSplitData2D(), c=self.fitColors[n], ls=self.fitLs, label=self.fitLabels[n], alpha=self.fitAlpha)
+                else:
+                    FIT=ax.errorbar(*self.fitterList[n].CurveData.getSplitData2D(), c=self.fitColors[n], ls=self.fitLs, label=self.fitLabels[n], alpha=self.fitAlpha)
+            for a in AX[1]:
+                a.set_alpha(self.erroralphabar)
+            for b in AX[2]:
+                b.set_alpha(self.erroralpha)
+        if self.show[n][1] and self.showCol2 is not 0:
+            if self.customLabelAx2 is not None:
+                if not isinstance(self.customLabelAx2, str):
+                    labelZ=self.customLabelAx2[n]
+                else:
+                    labelZ=self.customLabelAx2
+            else:
+                try:
+                    labelZ=labels[n]+" "+self.showColLabel[self.showCol2]
+                except TypeError:
+                    labelZ=[labels[n]+" "+self.showColLabel[singleShowCol2] for singleShowCol2 in showCol2]
+            if self.errors[n][1]:
+                try:
+                    AX2=ax2.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol2), yerr=[self.logErr[self.ax2errorTypeDown][n][:,showCol2-1],self.logErr[self.ax2errorTypeUp][n][:,showCol2-1]], capsize=self.capsize, capthick=self.capthick, c=ax2color[n], ls=ax2linestyles[n], marker=ax2markerstyles[n], label=labelZ,  errorevery=self.showErrorOnlyEvery[n])
+                except TypeError:
+                    for singleShowCol2,singleLabelZ in zip(showCol2,labelZ):
+                        AX2=ax2.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=singleShowCol2), yerr=[self.logErr[self.ax2errorTypeDown][n][:,showCol2-1],self.logErr[self.ax2errorTypeUp][n][:,showCol2-1]], capsize=self.capsize, capthick=self.capthick, c=ax2color[n], ls=ax2linestyles[n], marker=ax2markerstyles[n], label=singleLabelZ,  errorevery=self.showErrorOnlyEvery[n])
+            else:
+                try:
+                    AX2=ax2.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol2), c=ax2color[n], ls=ax2linestyles[n], marker=ax2markerstyles[n], label=labelZ)
+                except TypeError:
+                    for singleShowCol2,singleLabelZ in zip(showCol2,labelZ):
+                        AX2=ax2.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=singleShowCol2), c=ax2color[n], ls=ax2linestyles[n], marker=ax2markerstyles[n], label=singleLabelZ)
+            if self.fitList is not None and self.fitterList[n] is not None:
+                if type(self.fitterList[n]) is list:
+                    for fitter in self.fitterList[n]:
+                        try:
+                            fitter.fit(yCol=self.showCol2)
+                        except RuntimeError as err:
+                            raise FitException(n,fitList[n],err)
+                        fitter.doFitCurveData()
+                        fitter.limitData(xLim=fitter.curveDataXLim, feature=2)
+                        FIT2=ax2.errorbar(*fitter.CurveData.getSplitData2D(), c=self.fitColors[n+colorOffset], ls=self.fitLs, label=self.fitLabels[n], alpha=self.fitAlpha)
+                else:
+                    try:
+                        self.fitterList[n].fit(yCol=self.showCol2)
+                    except RuntimeError as err:
+                        raise FitException(n,fitList[n],err)
+                    self.fitterList[n].doFitCurveData()
+                    self.fitterList[n].limitData(xLim=fitter.curveDataXLim, feature=2)
+                    FIT2=ax2.errorbar(*self.fitterList[n].CurveData.getSplitData2D(), c=self.fitColors[n+colorOffset], ls=self.fitLs, label=self.fitLabels[n], alpha=self.fitAlpha)
+            for a in AX2[1]:
+                a.set_alpha(self.ax2erroralpha)
+            for b in AX2[2]:
+                b.set_alpha(self.ax2erroralphabar)
+                
+    def processPlot(self):
+        expectData=self.processAverage()[0]
+        showMarkers=self.showMarkers
+        showLines=self.showLines
         if self.iterLinestyles:
             linestyles=self.linestyles
-            ax2linestyles=self.linestyles[::-self.linstyleOffset]
+            ax2linestyles=self.linestyles[::-self.linestyleOffset]
             ax1color=[self.ax1color]*len(expectData)
             ax2color=[self.ax2color]*len(expectData)
         else:
-            linestyles=[self.ls]*len(expectData)
+            if isinstance(self.ls, list):
+                linestyles=self.ls
+            else:
+                linestyles=[self.ls]*len(expectData)
             ax2linestyles=[self.ax2ls]*len(expectData)
             ax1color=self.colors
             ax2color=self.colors
+        if self.iterMarkers:
+            markers=self.markers
+            ax2markers=self.markers[::-self.markerOffset]
+            ax1color=[self.ax1color]*len(expectData)
+            ax2color=[self.ax2color]*len(expectData)
+        else:
+            if isinstance(self.mk, list):
+                markers=self.mk
+            else:
+                markers=[self.mk]*len(expectData)
+            ax2markers=[self.ax2mk]*len(expectData)
+            ax1color=self.colors
+            ax2color=self.colors
+        mk=[""]*len(markers)
+        ls=[""]*len(linestyles)
+        ax2mk=[""]*len(ax2markers)
+        ax2ls=[""]*len(ax2linestyles)
         for n in range(0,len(expectData)):
-            try:
-                labelY=labels[n]+" "+self.showColLabel[self.showCol]
-            except TypeError:
-                labelY=[labels[n]+" "+self.showColLabel[singleShowCol] for singleShowCol in self.showCol]
-            if self.show[n][0]:
-                if self.errors[n][0]:
-                    try:
-                        AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol), yerr=[self.logErr[self.errorTypeDown][n][:,showCol-1],self.logErr[self.errorTypeUp][n][:,showCol-1]], c=ax1color[n], capsize=self.capsize, capthick=self.capthick , ls=linestyles[n], label=labelY, errorevery=self.showErrorOnlyEvery[n])
-                    except TypeError:
-                        for singleShowCol,singleLabelY in zip(showCol,labelY):
-                            AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=singleShowCol), yerr=[self.logErr[self.errorTypeDown][n][:,showCol-1],self.logErr[self.errorTypeUp][n][:,showCol-1]], c=ax1color[n], capsize=self.capsize, capthick=self.capthick , ls=linestyles[n], label=singleLabelY, errorevery=self.showErrorOnlyEvery[n])
-                else:
-                    try:
-                        AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol), c=ax1color[n], ls=linestyles[n], label=labelY)
-                    except TypeError:
-                        for singleShowCol,singleLabelY in zip(showCol,labelY):
-                            AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=singleShowCol), c=ax1color[n], ls=linestyles[n], label=singleLabelY)
-                if self.fitList is not None and self.fitterList[n] is not None:
-                    if type(self.fitterList[n]) is list:
-                        for fitter in self.fitterList[n]:
-                            FIT=ax.errorbar(*fitter.CurveData.getSplitData2D(), c=self.fitColors[n], ls=self.fitLs, label=self.fitLabels[n], alpha=self.fitAlpha)
-                    else:
-                        FIT=ax.errorbar(*self.fitterList[n].CurveData.getSplitData2D(), c=self.fitColors[n], ls=self.fitLs, label=self.fitLabels[n], alpha=self.fitAlpha)
-                for a in AX[1]:
-                    a.set_alpha(self.erroralphabar)
-                for b in AX[2]:
-                    b.set_alpha(self.erroralpha)
-            if self.show[n][1] and self.showCol2 is not 0:
-                if self.customLabelAx2 is not None:
-                    if not isinstance(self.customLabelAx2, str):
-                        labelZ=self.customLabelAx2[n]
-                    else:
-                        labelZ=self.customLabelAx2
-                else:
-                    try:
-                        labelZ=labels[n]+" "+self.showColLabel[self.showCol2]
-                    except TypeError:
-                        labelZ=[labels[n]+" "+self.showColLabel[singleShowCol2] for singleShowCol2 in showCol2]
-                if self.errors[n][1]:
-                    try:
-                        AX2=ax2.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol2), yerr=[self.logErr[self.ax2errorTypeDown][n][:,showCol2-1],self.logErr[self.ax2errorTypeUp][n][:,showCol2-1]], capsize=self.capsize, capthick=self.capthick, c=ax2color[n], ls=ax2linestyles[n], label=labelZ,  errorevery=self.showErrorOnlyEvery[n])
-                    except TypeError:
-                        for singleShowCol2,singleLabelZ in zip(showCol2,labelZ):
-                            AX2=ax2.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=singleShowCol2), yerr=[self.logErr[self.ax2errorTypeDown][n][:,showCol2-1],self.logErr[self.ax2errorTypeUp][n][:,showCol2-1]], capsize=self.capsize, capthick=self.capthick, c=ax2color[n], ls=ax2linestyles[n], label=singleLabelZ,  errorevery=self.showErrorOnlyEvery[n])
-                else:
-                    try:
-                        AX2=ax2.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol2), c=ax2color[n], ls=ax2linestyles[n], label=labelZ)
-                    except TypeError:
-                        for singleShowCol2,singleLabelZ in zip(showCol2,labelZ):
-                            AX2=ax2.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=singleShowCol2), c=ax2color[n], ls=ax2linestyles[n], label=singleLabelZ)
-                if self.fitList is not None and self.fitterList[n] is not None:
-                    if type(self.fitterList[n]) is list:
-                        for fitter in self.fitterList[n]:
-                            try:
-                                fitter.fit(yCol=self.showCol2)
-                            except RuntimeError as err:
-                                raise FitException(n,fitList[n],err)
-                            fitter.doFitCurveData()
-                            fitter.limitData(xLim=fitter.curveDataXLim, feature=2)
-                            FIT2=ax2.errorbar(*fitter.CurveData.getSplitData2D(), c=self.fitColors[n+colorOffset], ls=self.fitLs, label=self.fitLabels[n], alpha=self.fitAlpha)
-                    else:
-                        try:
-                            self.fitterList[n].fit(yCol=self.showCol2)
-                        except RuntimeError as err:
-                            raise FitException(n,fitList[n],err)
-                        self.fitterList[n].doFitCurveData()
-                        self.fitterList[n].limitData(xLim=fitter.curveDataXLim, feature=2)
-                        FIT2=ax2.errorbar(*self.fitterList[n].CurveData.getSplitData2D(), c=self.fitColors[n+colorOffset], ls=self.fitLs, label=self.fitLabels[n], alpha=self.fitAlpha)
-                for a in AX2[1]:
-                    a.set_alpha(self.ax2erroralpha)
-                for b in AX2[2]:
-                    b.set_alpha(self.ax2erroralphabar)
+            if showLines[n][0]:
+                ls[n]=linestyles[n]
+            if showMarkers[n][0]:
+                mk[n]=markers[n]
+            if showLines[n][1]:
+                ax2ls[n]=ax2linestyles[n]
+            if showMarkers[n][1]:
+                ax2mk[n]=ax2markers[n]
+            self.processPlotSub(n, ls, mk, ax2ls, ax2mk, ax1color, ax2color, expectData)
 
     def doPlot(self):
-        import matplotlib.pyplot
+
         if not self.no_plot:
-            fig,self.ax = self._newFig()
+            self.fig, self.ax = self._newFig()
             ax= self.ax
             xLabel=self.showColLabelUnit[self.xCol]
             ax.set_xlabel(xLabel)
@@ -888,10 +970,10 @@ class Plot():
             ax.set_ylabel(self.axYLabel)
             try:
                 if self.showColAxType[self.showCol] == "log":
-                    ax.set_yscale("log")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
+                    ax.set_yscale("log", nonposy="clip")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
             except TypeError:
                 if self.showColAxType[self.showCol[0]] == "log":
-                    ax.set_yscale("log")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
+                    ax.set_yscale("log", nonposy="clip")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
             if self.axYLim is not None:
                 ax.set_ylim(*self.axYLim)
             if self.axXLim is not None:
@@ -918,9 +1000,10 @@ class Plot():
                         ax2.set_ylim(*self.ax2YLim)
             self.dataList=self.processData()
             self.expectData, self.deviaData=self.processAverage()
-            if self.fitList is not None:
+            if self.fitList is not None and not self.alreadyFitted:
                 self.fitterList=self.__initFitter()
                 self.__processFit()
+                self.alreadyFitted=True
             self.processPlot()
             if self.xCol2 != 0:
                 self.axX2=ax.twiny()
@@ -931,7 +1014,9 @@ class Plot():
                     axX2.set_xscale("log")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
                 if self.ax2XLim is not None:
                     ax2.set_xlim(*self.ax2XLim)
+            #BEGIN: WARNING DANGEROUS!!!
             exec(self.injCode)
+            #END: WARNING DANGEROUS!!!
             self.afterPlot()
             handles, labels=ax.get_legend_handles_labels()
             handles = [h[0] for h in handles]
@@ -956,7 +1041,7 @@ class Plot():
                 axX2.set_xticklabels(self.xColTicksToXCol2Ticks(ax.get_xticks()))
             self.saveFig()
             self._rescaleRcParams()
-            matplotlib.pyplot.close(fig)
+            matplotlib.pyplot.close(self.fig)
         return [self,self.processFileName(option=".pdf")] #filename
     
     def processAllAndExport(self, **kwargs):
