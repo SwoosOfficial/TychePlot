@@ -5,7 +5,7 @@
 
 
 import matplotlib as mpl
-mpl.use("pgf")
+#mpl.use("pgf")
 import matplotlib.pyplot
 import numpy as np
 import scipy.interpolate as inter
@@ -86,7 +86,7 @@ class LifetimePlot(Plot):
                  normalize_peak=True,
                  set_peak_to_zero=True,
                  time_domain="n",
-                 fse="Decay with \n A = {:3.0f}\\,\\% \\& \\tau ~= {:3.0f}\\,{}s",
+                 fse="Decay with \n A = {:3.0f}\\,\\% \\& $\\tau$ ~= {:3.0f}\\,{}s",
                  **kwargs
                 ):
         Plot.__init__(self, name, fileList, averageMedian=averageMedian, showColAxType=showColAxType, showColAxLim=showColAxLim, showColLabel=showColLabel, showColLabelUnit=showColLabelUnit, fileFormat=fileFormat, errors=errors, fitColors=fitColors, partialFitLabels=["Partial mono-exponential fit"], **kwargs)
