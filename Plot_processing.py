@@ -99,6 +99,12 @@ def processPlotPair(plotpair):
     return [plot.doPlot() for plot in plotpair]
 
 
+def calc_plotList(plotList, pool=None):
+    if pool is None:
+        return [processPlotPair(plotPair) for plotPair in plotList]
+    return pool.map(processPlotPair,plotList)
+
+
 def calc(name_local, fileList_local, desiredPlots, inputParameters_local, cls_local, inputParametersForScaled_local, optionalParameterDict=None, multithreaded=True):
     global name
     global fileList
@@ -118,7 +124,7 @@ def calc(name_local, fileList_local, desiredPlots, inputParameters_local, cls_lo
         from multiprocessing import Pool
         pool = Pool(os.cpu_count())
         plotList=pool.map(buildPlotList,desiredPlots)
-        multiOutput=pool.map(processPlotPair,plotList)
+        multiOutput=calc_plotList(plotList, pool=pool)
         pool.close()
     else:
         #singlethreaded
@@ -128,8 +134,33 @@ def calc(name_local, fileList_local, desiredPlots, inputParameters_local, cls_lo
     files=[[plotOutput[1] for plotOutput in plotPair] for plotPair in multiOutput]
     return (plots,files)
 
+
 def export_data(plots, **kwargs):
     for plotpair in plots:
         for plot in plotpair:
             plot.processAllAndExport(**kwargs)
 
+def add_to_plot(plot, func, filename=None, labels=None, ls=None, errors=[False,False], show=[True, True], showLines=[True, True], showMarkers=[False,False]):
+    expect_list,devia_list = func(plot)
+    if labels is not None:
+        for label in labels:
+            plot.labels.append(label)
+    else:
+        plot.labels.append("Unknown")
+    if filename is not None:
+        plot.filename=filename
+    for expect, devia in zip(expect_list, devia_list):
+        plot.expectData.append(expect)
+        plot.deviaData.append(devia)
+        try:
+            plot.fitterList.append(None)
+        except:
+            pass
+        plot.errors.append(errors)
+        plot.show.append(show)
+        plot.showLines.append(showLines)
+        plot.showMarkers.append(showMarkers)
+    if ls is not None:
+        plot.ls=ls
+    plot.doPlot()
+    return plot
