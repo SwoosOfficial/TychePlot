@@ -145,7 +145,7 @@ class SpectraPlot(Plot):
             string+=self.fill+"normalised"
         return string+option
     
-    def process_normalization(self):
+    def process_normalization(self, data):
         if self.normalizeMode == 'single':
             data.processData(self.normalize, yCol=2)
             data.processData(self.normalize, yCol=5)
@@ -171,7 +171,7 @@ class SpectraPlot(Plot):
                             data.processData(self.noNegatives, yCol=3)
                             data.processData(self.noNegatives, yCol=5)
                             data.processData(self.noNegatives, yCol=6)
-                            self.process_normalization()
+                            self.process_normalization(data)
                             data.limitData(xLim=self.xLimOrig)
                             self.dataProcessed=True
                 else:
@@ -188,7 +188,7 @@ class SpectraPlot(Plot):
                             data.processData(self.noNegatives, yCol=3)
                             data.processData(self.noNegatives, yCol=5)
                             data.processData(self.noNegatives, yCol=6)
-                            self.process_normalization()
+                            self.process_normalization(data)
                             data.limitData(xLim=self.xLimOrig)
                             self.dataProcessed=True
             else:
@@ -205,7 +205,7 @@ class SpectraPlot(Plot):
                             data.processData(self.noNegatives, yCol=3)
                             data.processData(self.noNegatives, yCol=5)
                             data.processData(self.noNegatives, yCol=6)
-                            self.process_normalization()
+                            self.process_normalization(data)
                             data.limitData(xLim=self.xLimOrig)
                             self.dataProcessed=True
                 else:
@@ -222,7 +222,7 @@ class SpectraPlot(Plot):
                             data.processData(self.noNegatives, yCol=3)
                             data.processData(self.noNegatives, yCol=5)
                             data.processData(self.noNegatives, yCol=6)
-                            self.process_normalization()
+                            self.process_normalization(data)
                             data.limitData(xLim=self.xLimOrig)
                             self.dataProcessed=True
         
