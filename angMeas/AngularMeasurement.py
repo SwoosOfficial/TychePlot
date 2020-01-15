@@ -1,8 +1,12 @@
 import numpy as np
 import collections
 import itertools
-BLZFiles = {500: "../TychePlot/angMeas/150-BLZ-500-nm.txt", 
-            780: "./TychePlot/angMeas/100-BLZ-780-nm.txt"}
+import os
+
+cur_dir=os.path.dirname(os.path.realpath(__file__))+"/"
+
+BLZFiles = {500: cur_dir+"150-BLZ-500-nm.txt", 
+            780: cur_dir+"100-BLZ-780-nm.txt"}
 class Line:
     def __init__(self, data):
         self.pos = [float(val) for val in data[1:5]]
@@ -137,7 +141,7 @@ def PlotMeasurement(filename,wavelength = -1, BLZFile= 500, index = 0, savepath 
         file_begin, file_ending = savepath.split(".")
     sample = filename.split("/")[-1].split(".")[0]
     for index in range(a_meas.getNumMeasurements()):
-        if(wavelength is -1):
+        if(wavelength == -1):
             w = a_meas.getPeakWavelength(index)
         else:
             w = wavelength
@@ -164,7 +168,7 @@ def PlotSpectrum(filename,angle = -1,w1 = 400, w2 = 800, BLZFile = 500, index = 
     file_begin = "".join(savepath.split(".")[0:-1])
     sample = filename.split("/")[-1].split(".")[0]
     for index in range(a_meas.getNumMeasurements()):
-        if(angle is -1):
+        if(angle == -1):
             a = a_meas.getMinimumAngle(index)
         else:
             a = angle
@@ -185,7 +189,7 @@ def CompareMeasurements(filenames, wavelength = -1, BLZFile = 500, index = 0, sa
 
     measfiles = [AngularMeasFile(file, BLZFile) for file in filenames]
     a_meas = [meas.getMeas('ANGULAR_MEAS') for meas in measfiles]
-    if wavelength is -1:
+    if wavelength == -1:
         w = a_meas[0].getPeakWavelength(index)
     else: 
         w= wavelength
