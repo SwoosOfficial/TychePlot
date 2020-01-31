@@ -133,11 +133,11 @@ class Plot():
                     self.labels=labels
                 except IndexError:
                     raise ListShapeException("The labels' list has to be formatted like: [\"sampleALabel\",\"sampleBLabel\"]")
-                self.errors=[[deviceLabel is not "", deviceLabel is not ""] for deviceLabel in self.labels]
+                self.errors=[[deviceLabel != "", deviceLabel != ""] for deviceLabel in self.labels]
                 self.show=self.errors
             else:
                 try:
-                    if self.showCol is 0 or self.showCol2 is 0:
+                    if self.showCol == 0 or self.showCol2 == 0:
                         temp=[errors[m][0] for m in range(0,len(self.fileList))]
                     else:
                         temp=[errors[m][1] for m in range(0,len(self.fileList))]
@@ -154,7 +154,7 @@ class Plot():
                 self.labels=["Sample {:d}".format(m+1) for m in range(0,len(self.fileList))]
             if show is not None:
                 try:
-                    if self.showCol is 0 or self.showCol2 is 0:
+                    if self.showCol == 0 or self.showCol2 == 0:
                         temp=[show[m][0] for m in range(0,len(self.fileList))]
                     else:
                         temp=[show[m][1] for m in range(0,len(self.fileList))]
@@ -283,7 +283,7 @@ class Plot():
         self.alreadyFitted=False
         #dyn inits
         self.fileFormat=fileFormat
-        if len(showColTup) is not 2:
+        if len(showColTup) != 2:
             raise
         try:
             if showColTup[0]<=0 or showColTup[1]<0:
@@ -316,9 +316,9 @@ class Plot():
             self.showColLabelUnit=showColLabelUnitNoTex
         self.showColLabelUnitNoTex=showColLabelUnitNoTex
         if yLim is not None:
-            if len(yLim) is 2:
+            if len(yLim) == 2:
                 try:
-                    if len(yLim[0]) is 2:
+                    if len(yLim[0]) == 2:
                         self.showColAxLim[self.showCol]=yLim[0]
                         self.showColAxLim[self.showCol2]=yLim[1]
                     else:
@@ -505,7 +505,7 @@ class Plot():
                 "pgf.preamble": [r"\usepackage{amsmath}\usepackage{upgreek}"],
                 "lines.markersize": self.markerSize
             }
-        if self.customFontsize is not None and len(self.customFontsize) is 5:
+        if self.customFontsize is not None and len(self.customFontsize) == 5:
             pgf_with_lualatex.update({
                 "font.size": self.customFontsize[0],
                 "axes.labelsize": self.customFontsize[1],               # LaTeX default is 10pt font.
@@ -661,7 +661,7 @@ class Plot():
                 string=self.name.replace(" ","")+self.fill+self.showColLabel[self.showCol].replace(" ","")+"+"+self.showColLabel[self.showCol2].replace(" ","")
         else:
             string=self.filename.replace(" ","")+self.fill+self.showColLabel[self.showCol].replace(" ","")
-        if not self.scaleX is 1:
+        if self.scaleX != 1:
             string+=self.fill+"scaledWith{:03.0f}Pct".format(self.scaleX*100)
         if self.filenamePrefix is not None:
             string=self.filenamePrefix+self.fill+string
@@ -867,7 +867,7 @@ class Plot():
                 a.set_alpha(self.erroralphabar)
             for b in AX[2]:
                 b.set_alpha(self.erroralpha)
-        if self.show[n][1] and self.showCol2 is not 0:
+        if self.show[n][1] and self.showCol2 != 0:
             if self.customLabelAx2 is not None:
                 if not isinstance(self.customLabelAx2, str):
                     labelZ=self.customLabelAx2[n]
@@ -1021,7 +1021,7 @@ class Plot():
             handles, labels=ax.get_legend_handles_labels()
             handles = [h[0] for h in handles]
             #labels = labels[0:self.devices]
-            if True in [a[1] for a in self.show] and self.ax2Labels and self.showCol2 is not 0:
+            if True in [a[1] for a in self.show] and self.ax2Labels and self.showCol2 != 0:
                 handles2, labels2=ax2.get_legend_handles_labels()
                 handles2 = [h[0] for h in handles2]
                 #labels2 = labels2[0:self.devices]

@@ -332,7 +332,7 @@ class OLEDPlot(Plot):
             string+=self.fill+"noMedian"
         if not True in [a[1] for a in self.errors]:
             string+=self.fill+"withoutErrors"
-        if not self.scaleX is 1:
+        if not self.scaleX == 1:
             string+=self.fill+"scaledWith{:03.0f}Pct".format(self.scaleX*100)
         if not self.filenamePrefix is None:
             string=self.filenamePrefix+self.fill+string
