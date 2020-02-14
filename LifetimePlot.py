@@ -73,10 +73,10 @@ class LifetimePlot(Plot):
                  validYCol=2,
                  showColAxType=["lin","lin","log"],
                  showColAxLim=[None,None,None],
-                 showColLabel= ["","Time","Normalized Intensity"],
+                 showColLabel= ["","Time","Normalised Intensity"],
                  showColLabelUnit=["",
                   "Time ({}s)",
-                  "Normalized Intensity",             
+                  "Normalised Intensity",             
                  ],
                  averageMedian=False,
                  errors=False,
@@ -110,7 +110,7 @@ class LifetimePlot(Plot):
             string=self.name.replace(" ","")+self.fill+"lifetime"
         else:
             string=self.filename
-        if not self.scaleX is 1:
+        if not self.scaleX == 1:
             string+=self.fill+"scaledWith{:03.0f}Pct".format(self.scaleX*100)
         if self.filenamePrefix is not None:
             string=self.filenamePrefix+string
@@ -141,6 +141,18 @@ class LifetimePlot(Plot):
                 self.dataProcessed=True 
             return self.dataList
 
+    def plotExp(self,fitter,n):
+        xdata=fitter.CurveData.getSplitData2D()[0]
+        ydata1=self.exp(xdata, *fitter.params[0:2], 0)
+        ydata3=xdata/xdata*fitter.params[2]
+        textPos=fitter.textPos
+        amp=-fitter.params[1]
+        tp1=textPos
+        self.ax.errorbar(xdata, ydata3, c=self.fitColors[n+1], ls=self.fitLs, label="Offset", alpha=self.fitAlpha)
+        self.ax.errorbar(xdata, ydata1, c=self.fitColors[n+2], ls=self.fitLs, label="Partial mono-exponential fit", alpha=self.fitAlpha)
+        self.handleDesc(fitter, n=n+2, xsy=(0,np.amax(ydata1)), tp=tp1)  
+        
+        
     def plotDoubleExp(self,fitter,n):
         xdata=fitter.CurveData.getSplitData2D()[0]
         ydata1=self.exp(xdata, *fitter.params[0:2], 0)
@@ -159,11 +171,13 @@ class LifetimePlot(Plot):
         self.ax.errorbar(xdata, ydata3, c=self.fitColors[n+1], ls=self.fitLs, label="Offset", alpha=self.fitAlpha)
         self.ax.errorbar(xdata, ydata1, c=self.fitColors[n+2], ls=self.fitLs, label="Partial mono-exponential fit", alpha=self.fitAlpha)
         self.ax.errorbar(xdata, ydata2, c=self.fitColors[n+3], ls=self.fitLs, label="Partial mono-exponential fit", alpha=self.fitAlpha)
-        fse=self.fse
-        se=fse.format(np.round(fitter.params[1]*100,decimals=0),np.round(fitter.params[0],decimals=0),self.time_domain)
-        self.ax.annotate(s=se, size=self.customFontsize[2], xy=(0,np.amax(ydata1)), xytext=tp1, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n+2], edgecolor=self.fitColors[n+2], linewidth=mpl.rcParams["lines.linewidth"]))
-        se2=fse.format(np.round(fitter.params[4]*100,decimals=0),np.round(fitter.params[3],decimals=0),self.time_domain)
-        self.ax.annotate(s=se2, size=self.customFontsize[2], xy=(0,np.amax(ydata2)), xytext=tp2, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n+3], edgecolor=self.fitColors[n+3], linewidth=mpl.rcParams["lines.linewidth"]))
+        self.handleDesc(fitter, n=n+2, xsy=(0,np.amax(ydata1)), tp=tp1)
+        self.handleDesc(fitter, n=n+3, param_pos=3, xsy=(0,np.amax(ydata2)), tp=tp2)
+        #fse=self.fse
+        #se=fse.format(np.round(fitter.params[1]*100,decimals=0),np.round(fitter.params[0],decimals=0),self.time_domain)
+        #self.ax.annotate(s=se, size=self.customFontsize[2], xy=(0,np.amax(ydata1)), xytext=tp1, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n+2], edgecolor=self.fitColors[n+2], linewidth=mpl.rcParams["lines.linewidth"]))
+        #se2=fse.format(np.round(fitter.params[4]*100,decimals=0),np.round(fitter.params[3],decimals=0),self.time_domain)
+        #self.ax.annotate(s=se2, size=self.customFontsize[2], xy=(0,np.amax(ydata2)), xytext=tp2, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n+3], edgecolor=self.fitColors[n+3], linewidth=mpl.rcParams["lines.linewidth"]))
         
     def plotTripleExp(self,fitter,n):
         xdata=fitter.CurveData.getSplitData2D()[0]
@@ -210,13 +224,16 @@ class LifetimePlot(Plot):
         self.ax.errorbar(xdata, ydata1, c=self.fitColors[n+2], ls=self.fitLs, label="Partial mono-exponential fit", alpha=self.fitAlpha)
         self.ax.errorbar(xdata, ydata2, c=self.fitColors[n+3], ls=self.fitLs, label="Partial mono-exponential fit", alpha=self.fitAlpha)
         self.ax.errorbar(xdata, ydata3, c=self.fitColors[n+4], ls=self.fitLs, label="Partial mono-exponential fit", alpha=self.fitAlpha)
-        fse=self.fse
-        se=fse.format(np.round(fitter.params[1]*100,decimals=0),np.round(fitter.params[0],decimals=0),self.time_domain)
-        self.ax.annotate(s=se, size=self.customFontsize[2], xy=(0,np.amax(ydata1)), xytext=tp1, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n+2], edgecolor=self.fitColors[n+2], linewidth=mpl.rcParams["lines.linewidth"]))
-        se2=fse.format(np.round(fitter.params[4]*100,decimals=0),np.round(fitter.params[3],decimals=0),self.time_domain)
-        self.ax.annotate(s=se2, size=self.customFontsize[2], xy=(0,np.amax(ydata2)), xytext=tp2, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n+3], edgecolor=self.fitColors[n+3], linewidth=mpl.rcParams["lines.linewidth"]))
-        se3=se2=fse.format(np.round(fitter.params[6]*100,decimals=0),np.round(fitter.params[5],decimals=0),self.time_domain)
-        self.ax.annotate(s=se3, size=self.customFontsize[2], xy=(0,np.amax(ydata3)), xytext=tp3, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n+4], edgecolor=self.fitColors[n+4], linewidth=mpl.rcParams["lines.linewidth"]))
+        self.handleDesc(fitter, n=n+2, xsy=(0,np.amax(ydata1)), tp=tp1)
+        self.handleDesc(fitter, n=n+3, param_pos=3, xsy=(0,np.amax(ydata2)), tp=tp2)
+        self.handleDesc(fitter, n=n+4, param_pos=5, xsy=(0,np.amax(ydata3)), tp=tp3)
+        #fse=self.fse
+        #se=fse.format(np.round(fitter.params[1]*100,decimals=0),np.round(fitter.params[0],decimals=0),self.time_domain)
+        #self.ax.annotate(s=se, size=self.customFontsize[2], xy=(0,np.amax(ydata1)), xytext=tp1, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n+2], edgecolor=self.fitColors[n+2], linewidth=mpl.rcParams["lines.linewidth"]))
+        #se2=fse.format(np.round(fitter.params[4]*100,decimals=0),np.round(fitter.params[3],decimals=0),self.time_domain)
+        #self.ax.annotate(s=se2, size=self.customFontsize[2], xy=(0,np.amax(ydata2)), xytext=tp2, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n+3], edgecolor=self.fitColors[n+3], linewidth=mpl.rcParams["lines.linewidth"]))
+        #se3=se2=fse.format(np.round(fitter.params[6]*100,decimals=0),np.round(fitter.params[5],decimals=0),self.time_domain)
+        #self.ax.annotate(s=se3, size=self.customFontsize[2], xy=(0,np.amax(ydata3)), xytext=tp3, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n+4], edgecolor=self.fitColors[n+4], linewidth=mpl.rcParams["lines.linewidth"]))
     
         
     def importData(self):
@@ -224,47 +241,55 @@ class LifetimePlot(Plot):
         return self.dataList
     
     
+    def handleDesc(self, fitter, n=2, param_pos=0, xsy=None, tp=None):
+        ax=self.ax
+        if fitter.params[0] < 1 or self.time_domain=="p":
+            timedomain = "p"
+            lifetime=fitter.params[param_pos]*1000
+        else:
+            lifetime=fitter.params[param_pos]
+            timedomain=self.time_domain
+        #if self.xCol!=4:
+            #se=fitter.desc.format(np.round(fitter.params[self.xParamPos]))
+       # else:
+
+        try:
+            se=fitter.desc.format(np.round(fitter.params[param_pos+1]*100,decimals=0),np.round(lifetime,decimals=0),timedomain)
+        except:
+            se=self.fse.format(np.round(fitter.params[param_pos+1]*100,decimals=0),np.round(lifetime,decimals=0),timedomain)
+
+        sze=self.customFontsize[2]
+        if xsy is None:
+            xsy=(fitter.params[self.xParamPos],np.amax(fitter.CurveData.getSplitData2D()[1])-0.1*np.amax(fitter.CurveData.getSplitData2D()[1]))
+        if tp is None:
+            tp=fitter.textPos
+        arprps=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n], edgecolor=self.fitColors[n], linewidth=mpl.rcParams["lines.linewidth"])
+        ax.annotate(s=se, size=sze, xy=xsy, xytext=tp, arrowprops=arprps)
+    
     
     def afterPlot(self):
-        ax=self.ax
-        fse=self.fse
+        
         for n in range(0,len(self.expectData)):
             try:
                 if self.fitterList[n] is not None:
                     if type(self.fitterList[n]) is list:
                         for fitter in self.fitterList[n]:
+                            if fitter.function == self.exp:
+                                self.plotExp(fitter,n)
                             if fitter.function == self.doubleExp:
                                 self.plotDoubleExp(fitter,n)
                             if fitter.function == self.tripleExp:
                                 self.plotTripleExp(fitter,n)
-                            #annotation
-                            if fitter.desc != None:
-                                try:
-                                    se=fitter.desc.format(np.round(fitter.params[1]*100,decimals=0),np.round(fitter.params[0],decimals=0),self.time_domain)
-                                except:
-                                    se=fse.format(np.round(fitter.params[1]*100,decimals=0),np.round(fitter.params[0],decimals=0),self.time_domain)
-                                ax.annotate(s=se, size=self.customFontsize[2], xy=(fitter.params[self.xParamPos],np.amax(fitter.CurveData.getSplitData2D()[1])-0.1*np.amax(fitter.CurveData.getSplitData2D()[1])), xytext=fitter.textPos, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n], edgecolor=self.fitColors[n], linewidth=mpl.rcParams["lines.linewidth"]))
                     else:
+                        if self.fitterList[n].function == self.exp:
+                            self.plotExp(self.fitterList[n],n)
                         if self.fitterList[n].function == self.doubleExp:
                             self.plotDoubleExp(self.fitterList[n],n)
                         if self.fitterList[n].function == self.tripleExp:
                             self.plotTripleExp(self.fitterList[n],n)
-                        #annotation
-                        if self.fitterList[n].desc != None:
-                            fitter=self.fitterList[n]
-                            if self.xCol!=4:
-                                se=fitter.desc.format(np.round(fitter.params[self.xParamPos]))
-                            else:
-                                try:
-                                    se=fitter.desc.format(np.round(fitter.params[1]*100,decimals=0),np.round(fitter.params[0],decimals=0),self.time_domain)
-                                except:
-                                    se=fse.format(np.round(fitter.params[1]*100,decimals=0),np.round(fitter.params[0],decimals=0),self.time_domain)
-                            sze=self.customFontsize[2]
-                            xsy=(fitter.params[self.xParamPos],np.amax(fitter.CurveData.getSplitData2D()[1])-0.1*np.amax(fitter.CurveData.getSplitData2D()[1]))
-                            arprps=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n], edgecolor=self.fitColors[n], linewidth=mpl.rcParams["lines.linewidth"])
-                            ax.annotate(s=se, size=sze, xy=xsy, xytext=fitter.textPos, arrowprops=arprps)
+
             except Exception as e:
-                pass
+                print(e)
                 
 
 

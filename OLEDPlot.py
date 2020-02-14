@@ -100,8 +100,8 @@ class OLEDPlot(Plot):
         return cur_o
     
     @classmethod
-    def generateFileList(cls, prefix, pixels=4, samples=4, fill="_", alphaOffset=0, truthTable=None, postfix=""):
-        generatedList=[[prefix+fill+cls.chars[sample+alphaOffset]+postfix+fill+str(pixel+1) for pixel in range(0,pixels)] for sample in range(0,samples)]#
+    def generateFileList(cls, prefix, pixels=4, subdir="", samples=4, fill="_", alphaOffset=0, truthTable=None, postfix=""):
+        generatedList=[[subdir+prefix+fill+cls.chars[sample+alphaOffset]+postfix+fill+str(pixel+1) for pixel in range(0,pixels)] for sample in range(0,samples)]#
         if truthTable is None:
             return generatedList
         return [[sample for truth,sample in zip(truthTableForSample,sampleList) if truth] for truthTableForSample,sampleList in zip(truthTable,generatedList)]

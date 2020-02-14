@@ -31,6 +31,10 @@ from Fitter import Fitter
 
 class Plot():
     
+    #constants
+    fig_width_default_pt=424.75906
+    
+    
     @classmethod
     def equalizeRanges(cls, data, norm=(390,780,401)):
         arr, arr2=data.getSplitData2D()
@@ -200,7 +204,7 @@ class Plot():
                  xColOrig=1,
                  title=None,
                  HWratio=3/4, # height to width ratio
-                 fig_width_pt=424.75906, # get it by \the\textwidth
+                 fig_width_pt=fig_width_default_pt, # get it by \the\textwidth
                  titleBool=True,
                  legendEdgeSize=1,
                  ax2Labels=True,
@@ -273,6 +277,7 @@ class Plot():
                  showLines=True,
                  showMarkers=False,
                  markerSize=6.0,
+                 subdir=None,
                  #ax_aspect='auto',
                 ):
         #static inits
@@ -652,18 +657,30 @@ class Plot():
         else:
             #matplotlib.pyplot.show()
             matplotlib.pyplot.savefig(self.processFileName(option=".png"))
+            
+    def processFileName_makedirs(self):
+        try:
+            folder=os.path.dirname(self.filenamePrefix)
+            os.makedirs(folder)
+        except FileExistsError as e:
+            if e.errno != 17:
+                raise
+        except FileNotFoundError as f:
+            if f.errno!=2:
+                raise
         
     def processFileName(self, option=".pdf"):
         if self.filename is None:
             if self.showCol2 == 0:
-                string=self.name.replace(" ","")+self.fill+self.showColLabel[self.showCol].replace(" ","")
+                string+=self.name.replace(" ","")+self.fill+self.showColLabel[self.showCol].replace(" ","")
             else:
-                string=self.name.replace(" ","")+self.fill+self.showColLabel[self.showCol].replace(" ","")+"+"+self.showColLabel[self.showCol2].replace(" ","")
+                string+=self.name.replace(" ","")+self.fill+self.showColLabel[self.showCol].replace(" ","")+"+"+self.showColLabel[self.showCol2].replace(" ","")
         else:
             string=self.filename.replace(" ","")+self.fill+self.showColLabel[self.showCol].replace(" ","")
         if self.scaleX != 1:
             string+=self.fill+"scaledWith{:03.0f}Pct".format(self.scaleX*100)
         if self.filenamePrefix is not None:
+            self.processFileName_makedirs()
             string=self.filenamePrefix+self.fill+string
         return string+option
         

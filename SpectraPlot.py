@@ -91,13 +91,13 @@ class SpectraPlot(Plot):
                  bgYCol=[None],
                  showColAxType=["lin","lin","lin","lin","lin","lin","lin"],
                  showColAxLim=[None,None,None,None,None,None,None],
-                 showColLabel= ["","Wavelength","Normalized Intensity", "Spectral Radiance", "Energy", "Normalized Intensity", "Spectral Radiance"],
+                 showColLabel= ["","Wavelength","Normalised Intensity", "Spectral Radiance", "Energy", "Normalised Intensity", "Spectral Radiance"],
                  showColLabelUnit=["",
                   "Wavelength (nm)",
-                  "Normalized Intensity",
+                  "Normalised Intensity",
                   "Spectral Radiance ($\\tfrac{\\mathrm{W}}{\\mathrm{sr}\\cdot \\mathrm{m}^2\\cdot \\mathrm{nm}}$)",                 
                   "Energy (eV)",
-                  "Normalized Intensity", #energy scaled
+                  "Normalised Intensity", #energy scaled
                   "Spectral Radiance ($\\tfrac{\\mathrm{W}}{\\mathrm{sr}\\cdot \\mathrm{m}^2\\cdot \\mathrm{eV}}$)"                 
                  ],
                  averageMedian=False,
@@ -133,9 +133,10 @@ class SpectraPlot(Plot):
             string=self.name.replace(" ","")+self.fill+"spectra"
         else:
             string=self.filename
-        if not self.scaleX is 1:
+        if not self.scaleX == 1:
             string+=self.fill+"scaledWith{:03.0f}Pct".format(self.scaleX*100)
         if self.filenamePrefix is not None:
+            self.processFileName_makedirs()
             string=self.filenamePrefix+string
         if self.normalizeMode is None:
             string+=self.fill+"not"
