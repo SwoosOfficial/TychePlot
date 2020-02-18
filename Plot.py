@@ -456,7 +456,7 @@ class Plot():
             self.__initFileList(newFileList, errors, labels, show, fitLabels, showLines, showMarkers)
         else:
             self.__initFileList(fileList, errors, labels, show, fitLabels, showLines, showMarkers)
-        self.dataList=self.__importData()
+        self.dataList=self.importData()
 
         
     def _set_size(w,h, ax=None):
@@ -685,7 +685,7 @@ class Plot():
         return string+option
         
         
-    def __importData(self):
+    def importData(self):
         if not self.dataImported:
             self.dataList=[[Data(fileToNpArray(measurement, **self.fileFormat)[0], desc=fileToNpArray(measurement, **self.fileFormat)[1], xCol=self.xCol, yCol=self.showCol) for measurement in sample] for sample in self.fileList]
         return self.dataList
@@ -706,7 +706,15 @@ class Plot():
     def processAvg(self, dataList=None):
         if dataList is None:
             dataList=self.dataList
-        try:
+        errorData=True
+        for data in dataList:
+            try:
+                qtyCol=len(dataList[0][0].getData()[0])
+                errorData=False
+            except IndexError:
+                pass
+
+        if not errorData:
             qtyCol=len(dataList[0][0].getData()[0])
             dataColList=[[[data.getData()[:,m] for data in deviceData] for deviceData in dataList] for m in range(0,qtyCol)]
             descList=[deviceData[0].desc for deviceData in dataList]
@@ -716,10 +724,9 @@ class Plot():
             devDataList=[np.sqrt(np.sum([np.square(np.subtract(data,tempData.getData())) for tempData in deviceData],axis=0)/len(deviceData)) for data, deviceData in zip(avgDataList, dataList)]
             avgData=[Data(data, desc=desc, xCol=self.xCol, yCol=self.showCol) for data,desc in zip(avgDataList,descList)]
             devData=[Data(data, xCol=self.xCol, yCol=self.showCol) for data in devDataList]
-        except (ValueError,IndexError):
-            throw
-            warnings.warn("Unsupported Input for Error estimation given")
-            avgData, devData = self.concentenate_data()
+        else:
+            avgData=[]
+            devData=[]
         return avgData, devData
 
     #
@@ -729,19 +736,30 @@ class Plot():
     def processMedian(self, dataList=None):
         if dataList is None:
             dataList=self.dataList
-        try:
-            qtyCol=len(dataList[0][0].getData()[0])
+        errorData=True
+        for data in dataList:
+            try:
+                qtyCol=len(data[0].getData()[0])
+                errorData=False
+            except IndexError:
+                pass
+        if not errorData:
             dataColList=[[[data.getData()[:,m] for data in deviceData] for deviceData in dataList] for m in range(0,qtyCol)]
-            descList=[deviceData[0].desc for deviceData in dataList]
+            descList=[]
+            for deviceData in dataList:
+                try:
+                    descList.append(deviceData[0].desc)
+                except IndexError:
+                    descList.append("")
             medColList=[[np.median(element, axis=0) for element in column] for column in dataColList]
             medList=[[medColList[m][n] for m in range(0,qtyCol)] for n in range(0,len(dataList))]
             medDataList=[Data.mergeData(medData) for medData in medList]
             devDataList=[np.sqrt(np.sum([np.square(np.subtract(data,tempData.getData())) for tempData in deviceData],axis=0)/len(deviceData)) for data, deviceData in zip(medDataList, dataList)]
             medData=[Data(data, desc=desc, xCol=self.xCol, yCol=self.showCol) for data,desc in zip(medDataList,descList)]
             devData=[Data(data, xCol=self.xCol, yCol=self.showCol) for data in devDataList]
-        except (ValueError,IndexError):
-            warnings.warn("Unsupported Input for Error estimation given")
-            medData, devData = self.concentenate_data()
+        else:
+            medData=[]
+            devData=[]
         return medData, devData
     
     def processCustomMedian(self, dataList):
@@ -806,24 +824,33 @@ class Plot():
             dataArray=[]
             for data in dataSubList:
                 dataArray.append(data.getData())
-            device_data=Data(np.vstack(dataArray), xCol=self.xCol, yCol=self.showCol)
-            device_data.removeDoubles()
-            new_dataList.append(device_data)
-            new_devia_dataList.append(Data(np.zeros(device_data.getData().shape), xCol=self.xCol, yCol=self.showCol))
+            try:
+                device_data=Data(np.vstack(dataArray), xCol=self.xCol, yCol=self.showCol)
+                device_data.removeDoubles()
+                new_dataList.append(device_data)
+                new_devia_dataList.append(Data(np.zeros(device_data.getData().shape), xCol=self.xCol, yCol=self.showCol))
+            except ValueError:
+                pass
         return new_dataList, new_devia_dataList
     
     def processAverage(self):
         if not self.averageProcessed:
             if not self.concentenate_files_instead_of_avg:
-                if self.averageMedian:
-                    expectData, deviaData = self.processMedian()
-                else:
-                    expectData, deviaData = self.processAvg()
+                try:
+                    if self.averageMedian:
+                        expectData, deviaData = self.processMedian()
+                    else:
+                        expectData, deviaData = self.processAvg()
+                except (ValueError,IndexError):
+                    raise
+                    #warnings.warn("Unsupported Input for Error estimation given")
+                    expectData, deviaData = ([],[])    
                 self.expectData=expectData
                 self.deviaData=deviaData
                 self.logErr=self.calcLogErr(self.expectData,self.deviaData)
             else:
                 self.expectData, self.deviaData=self.concentenate_data()
+            
             self.averageProcessed=True
         return self.expectData, self.deviaData
     
@@ -858,7 +885,7 @@ class Plot():
         ax2markerstyles=ax2mk
         expectData=data
         try:
-              labelY=labels[n]+" "+self.showColLabel[self.showCol]
+            labelY=labels[n]+" "+self.showColLabel[self.showCol]
         except TypeError:
             labelY=[labels[n]+" "+self.showColLabel[singleShowCol] for singleShowCol in self.showCol]
         if self.show[n][0]:
@@ -867,7 +894,7 @@ class Plot():
                     AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol), yerr=[self.logErr[self.errorTypeDown][n][:,showCol-1],self.logErr[self.errorTypeUp][n][:,showCol-1]], c=ax1color[n], capsize=self.capsize, capthick=self.capthick , ls=linestyles[n], marker=markerstyles[n], label=labelY, errorevery=self.showErrorOnlyEvery[n])
                 except TypeError:
                     for singleShowCol,singleLabelY in zip(showCol,labelY):
-                        AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=singleShowCol), yerr=[self.logErr[self.errorTypeDown][n][:,showCol-1],self.logErr[self.errorTypeUp][n][:,showCol-1]], c=ax1color[n], capsize=self.capsize, capthick=self.capthick , ls=linestyles[n], marker=markerstyles[n], label=singleLabelY, errorevery=self.showErrorOnlyEvery[n])
+                        AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=singleShowCol), yerr=[self.logErr[self.errorTypeDown][n][:,showCol-1],self.logErr[self.errorTypeUp][n][:,showCol-1]], c=ax1color[n], capsize=self.capsize, capthick=self.capthick, ls=linestyles[n], marker=markerstyles[n], label=singleLabelY, errorevery=self.showErrorOnlyEvery[n])
             else:
                 try:
                     AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol), c=ax1color[n], ls=linestyles[n], marker=markerstyles[n], label=labelY)
@@ -931,7 +958,7 @@ class Plot():
                 b.set_alpha(self.ax2erroralphabar)
                 
     def processPlot(self):
-        expectData=self.processAverage()[0]
+        expectData=self.expectData
         showMarkers=self.showMarkers
         showLines=self.showLines
         if self.iterLinestyles:
@@ -1064,7 +1091,7 @@ class Plot():
     def processAllAndExport(self, **kwargs):
         self.exportAllData(**kwargs)
     
-    def exportAllData(self, fileEnd=".csv", colSep=",", fill=None, errorTypes=None, errorString="Error of ", expectData=None, errData=None, noError=False):
+    def exportAllData(self, subdir="export/", fileEnd=".csv", colSep=",", fill=None, errorTypes=None, errorString="Error of ", expectData=None, errData=None, noError=False):
         if expectData is None:
             expectData=self.expectData
         if errData is None:
@@ -1076,9 +1103,17 @@ class Plot():
             for m in range(1,len(self.showColAxType)):
                 if m == "log":
                     errorTypes[m-1]=1
-                           
+        try:
+            folder=os.path.dirname(subdir+self.name)
+            os.makedirs(folder)
+        except FileExistsError as e:
+            if e.errno != 17:
+                raise
+        except FileNotFoundError as f:
+            if f.errno!=2:
+                raise
         for l in range(0,len(self.fileList)):
-            file = open(self.name.replace(" ","")+fill+self.labels[l].replace(" ","")+fileEnd,"w")
+            file = open(subdir+self.name.replace(" ","")+fill+self.labels[l].replace(" ","")+fileEnd,"w")
             line = ""
             n=0
             for label in self.showColLabelUnitNoTex:

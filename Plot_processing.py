@@ -4,7 +4,6 @@
 import copy
 
 inputParameters={}
-inputParametersForScaled={}
 fileList=[]
 name=""
 optionalParameters={
@@ -17,19 +16,15 @@ cls=None
 
 def initPlot(xCol=1, showColTup=(2,3), customInputParameters=None):
     local_inputParameters=copy.deepcopy(inputParameters)
-    local_inputParametersForScaled=copy.deepcopy(inputParametersForScaled)
     if customInputParameters is not None:
         local_inputParameters.update(customInputParameters)
-        local_inputParametersForScaled.update(customInputParameters)
         try:
             local_optionalParameters=customInputParameters["optionalParameters"]
             local_inputParameters.pop("optionalParameters")
-            local_inputParametersForScaled.pop("optionalParameters")
         except KeyError:
             local_optionalParameters=copy.deepcopy(optionalParameters)
     else:
         local_optionalParameters=copy.deepcopy(optionalParameters)
-    scPlot=None
     if local_optionalParameters["customLims"]:
         try:
             xLimOrig=local_optionalParameters["xOrigLims"][showColTup[0]]
@@ -44,16 +39,7 @@ def initPlot(xCol=1, showColTup=(2,3), customInputParameters=None):
                     showColAxLim=local_optionalParameters["yAxisLims"], 
                     **local_inputParameters
         )
-        if local_optionalParameters["scaled"]:
-            scPlot=cls(
-                            name,
-                            fileList,
-                            xCol=xCol,
-                            showColTup=showColTup,
-                            xLimOrig=xLimOrig,
-                            showColAxLim=local_optionalParameters["yAxisLims"], 
-                            **local_inputParametersForScaled
-            )
+
     else:
         plot=cls(
                     name,
@@ -62,17 +48,7 @@ def initPlot(xCol=1, showColTup=(2,3), customInputParameters=None):
                     showColTup=showColTup,
                     **local_inputParameters
         )
-        if local_optionalParameters["scaled"]:
-            scPlot=cls(
-                            name,
-                            fileList,
-                            xCol=xCol,
-                            showColTup=showColTup,
-                            **local_inputParametersForScaled
-            )
-    if scPlot is None:
-        return [plot]
-    return [plot,scPlot]
+    return [plot]
 
 def buildPlotList(desiredPlot):
     try:
@@ -105,18 +81,16 @@ def calc_plotList(plotList, pool=None):
     return pool.map(processPlotPair,plotList)
 
 
-def calc(name_local, fileList_local, desiredPlots, inputParameters_local, cls_local, inputParametersForScaled_local, optionalParameterDict=None, multithreaded=True):
+def calc(name_local, fileList_local, desiredPlots, inputParameters_local, cls_local, optionalParameterDict=None, multithreaded=True):
     global name
     global fileList
     global cls
     global inputParameters
-    global inputParametersForScaled
     global optionalParameters
     name=name_local
     fileList=fileList_local
     cls=cls_local
     inputParameters=inputParameters_local
-    inputParametersForScaled=inputParametersForScaled_local
     if optionalParameterDict is not None:
         optionalParameters=optionalParameterDict
     if multithreaded:
@@ -140,6 +114,33 @@ def export_data(plots, **kwargs):
         for plot in plotpair:
             plot.processAllAndExport(**kwargs)
 
+def plot(
+         name,
+         fileList,
+         desiredPlots,
+         present,
+         inputParameters,
+         plot_class,
+         optionalParameters={},
+         multithreaded=True,
+         title="", 
+         add_name="",
+         feature="both",
+        ):
+    if add_name != "":
+        name=name+add_name
+    if feature == "both":
+        presentPlots=copy.deepcopy(desiredPlots)
+        desiredPlots=desiredPlots+[presentPlot["custom"].update(present) for presentPlot in presentPlots]
+    elif feature == "default":
+        pass
+    elif feature == "present":
+        desiredPlots=[presentPlot["custom"].update(present) for presentPlot in desiredPlots]
+    else:
+        raise ValueError("No Such Feature")
+    return calc(name, fileList, desiredPlots, inputParameters, plot_class, optionalParameterDict=optionalParameters, multithreaded=multithreaded)
+            
+            
 def add_to_plot(plot, func, filename=None, labels=None, ls=None, errors=[False,False], show=[True, True], showLines=[True, True], showMarkers=[False,False]):
     expect_list,devia_list = func(plot)
     if labels is not None:

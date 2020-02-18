@@ -48,6 +48,11 @@ class OLEDPlot(Plot):
     Luminous_Efficacy=7
     EQE=8
     
+    #defaults
+    jvl_file_format_default={"separator":"\t", "skiplines":1, "fileEnding":".uil"}
+    spectral_data_format_default={"separator":";", "skiplines":82, "fileEnding":".csv"}
+    pixels_default_qty=4
+    
     @classmethod
     def ohmicLaw(cls, volt, conductivity):
         return volt*conductivity
@@ -100,18 +105,41 @@ class OLEDPlot(Plot):
         return cur_o
     
     @classmethod
-    def generateFileList(cls, prefix, pixels=4, subdir="", samples=4, fill="_", alphaOffset=0, truthTable=None, postfix=""):
+    def generateFileList(cls, prefix, pixels=pixels_default_qty, subdir="", samples=4, fill="_", alphaOffset=0, truthTable=None, postfix=""):
         generatedList=[[subdir+prefix+fill+cls.chars[sample+alphaOffset]+postfix+fill+str(pixel+1) for pixel in range(0,pixels)] for sample in range(0,samples)]#
         if truthTable is None:
             return generatedList
         return [[sample for truth,sample in zip(truthTableForSample,sampleList) if truth] for truthTableForSample,sampleList in zip(truthTable,generatedList)]
-        
+       
+    @classmethod    
+    def get_valid_pixel_by_user(cls, series_indicator, jvl_file_format=jvl_file_format_default, **kwargs):
+        valid_pixel=[]
+        valid_device=[]
+        OLED_fileList=cls.generateFileList(series_indicator, **kwargs)
+        import matplotlib.pyplot as plt
+        for sample in OLED_fileList:
+            plt.clf()
+            for pixel in sample:
+                data=fileToNpArray(pixel, **jvl_file_format)[0]
+                plt.plot(data[:,0],data[:,1], label="Current - Px "+pixel[-1])
+                plt.plot(data[:,0],data[:,2], label="Photocurrent - Px "+pixel[-1])
+            plt.yscale("log")
+            plt.title(sample)
+            plt.legend()
+            plt.show()
+            valid_pixels_input=input("Valid pixels")
+            if len(valid_pixels_input)!=len(sample):
+                raise
+            valid_pixel.append([bool(int(pixel)) for pixel in valid_pixels_input])
+            valid_device.append(int(valid_pixels_input) != 0)
+        return valid_device, valid_pixel
+    
     
     def __init__(self,
                  name,
                  fileList,
                  spectraFile=None,
-                 fileFormat={"separator":"\t", "skiplines":1, "fileEnding":".uil"},
+                 fileFormat=jvl_file_format_default,
                  title=None,
                  pixelsize_mm2=3.8,
                  skipSweepBack=True,
@@ -148,7 +176,7 @@ class OLEDPlot(Plot):
                   "Exponent"
                  ],
                  photodiodeFunctionFile=os.path.dirname(os.path.abspath(inspect.getsourcefile(Data)))+"/luminFunction.csv",
-                 spectralDataFormat={"separator":";", "skiplines":82}, #jeti csv format
+                 spectralDataFormat=spectral_data_format_default, #jeti csv format
                  diodeDataFormat={"separator":",", "skiplines":0, "lastlines":50}, #custom csv format
                  titleForm="\\textbf{{{} characteristic curve of}}\n\\textbf{{the {} OLED}}",
                  legLoc=2,
@@ -166,11 +194,12 @@ class OLEDPlot(Plot):
                  **kwargs
                 ):
         self.sweepOverride=sweepOverride
+        self.averageSweepBack=averageSweepBack
+        self.skipSweepBack=skipSweepBack
+        self.noSweepBackMeasured=noSweepBackMeasured
         Plot.__init__(self, name, fileList, averageMedian=averageMedian, showColAxType=showColAxType, showColAxLim=showColAxLim, showColLabel=showColLabel, showColLabelUnit=showColLabelUnit, showColLabelUnitNoTex=showColLabelUnitNoTex,fileFormat=fileFormat, legLoc=legLoc, **kwargs)
         #dyn inits
         self.pixelsize_mm2=pixelsize_mm2
-        self.skipSweepBack=skipSweepBack
-        self.noSweepBackMeasured=noSweepBackMeasured
         self.diodYCol=diodYCol
         self.spectraRange=spectraRange
         self.spectralDataFormat=spectralDataFormat
@@ -194,7 +223,6 @@ class OLEDPlot(Plot):
         else:
             self.samples=len(self.fileList)
         self.idealDevice=idealDevice
-        self.averageSweepBack=averageSweepBack
         self.maxEqe=maxEqe
         self.darkCurrent=darkCurrent
         self.darkCurrentValidPoints=darkCurrentValidPoints
@@ -334,7 +362,8 @@ class OLEDPlot(Plot):
             string+=self.fill+"withoutErrors"
         if not self.scaleX == 1:
             string+=self.fill+"scaledWith{:03.0f}Pct".format(self.scaleX*100)
-        if not self.filenamePrefix is None:
+        if self.filenamePrefix is not None:
+            self.processFileName_makedirs()
             string=self.filenamePrefix+self.fill+string
         return string+option
 
@@ -343,6 +372,8 @@ class OLEDPlot(Plot):
             for deviceData,spectralData in zip(self.dataList,self.spectralDataList):
                 nList=[]
                 mList=[]
+                validData=False
+                l=0
                 for data in deviceData:
                     data.limitData(xLim=self.xLimOrig, xCol=self.xColOrig)
                     data.processData(self.remDarkCurr, yCol=3)
@@ -381,20 +412,34 @@ class OLEDPlot(Plot):
                                 nList.append(data.getFirstIndexWhereGreaterOrEq(self.xCol,self.xLim[0]))
                                 mList.append(data.getLastIndexWhereSmallerOrEq(self.xCol,self.xLim[1]))
                             else:
-                                nList.append(data.getFirstIndexWhereGreaterOrEq(self.limCol,self.xLim[0]))
-                                mList.append(data.getLastIndexWhereSmallerOrEq(self.limCol,self.xLim[1]))
-                        except IndexError as ie:#
-                            warnings.warn("Invalid Limits at column "+str(ie)[-1:]+" with value "+str(ie)[45:52])
+                                n=data.getFirstIndexWhereGreaterOrEq(self.limCol,self.xLim[0])
+                                nList.append(n)
+                                if self.noSweepBackMeasured or self.skipSweepBack:
+                                    mList.append(data.getLastIndexWhereSmallerOrEq(self.limCol,self.xLim[1]))
+                                else:
+                                    mList.append(-len(data.getData())//2)
+                            validData=True
+                        except IndexError as ie:
+                            
+                            l=len(data.getData()[:,0])
+                            #warnings.warn("Invalid Limits at column "+str(ie)[-1:]+" with value "+str(ie)[45:52])
                 try:
-                    n=max(nList)
-                    m=min(mList)
+                    if validData:
+                        n=max(nList)
+                        m=min(mList)
+                    else:
+                        n=l
+                        m=-1
                     for data in deviceData:
                         if m==-1:
                             data.setData(data.getData()[n:])
                         else:
                             data.setData(data.getData()[n:m+1])
+                            
+                            
                 except ValueError:
-                        pass
+                    pass
+                
         self.dataProcessed=True
         return self.dataList
 

@@ -164,16 +164,13 @@ class Data:
         self.setData(data)
         
     def getExtremValue(self, feature=1, typus="min"):
-        if (feature == 0) or (feature == 1):
-            a=self.getSplitData2D()[feature]
-            if typus=="min":
-                return np.amin(a)
-            elif typus=="max":
-                return np.amax(a)
-            else:
-                raise NotYetImplementedError
+        a=self.__data[:,feature+1]
+        if typus=="min":
+            return np.amin(a)
+        elif typus=="max":
+            return np.amax(a)
         else:
-            return 0
+            raise NotYetImplementedError
         
     def getExtremValues(self, typus="min"):
         result=[]
@@ -196,10 +193,10 @@ class Data:
                 return n
         raise IndexError("No Index found where a value is greater than {:7.1E}, invalid limits at column:".format(value)+repr(column))
     
-    def getLastIndexWhereSmallerOrEq(self,column,value,tolerance=0):
+    def getLastIndexWhereSmallerOrEq(self,column,value,tolerance=0, offset=1):
         data=self.getData()
         colVec=data[:,column-1]
-        for n in range(1,len(colVec)):
+        for n in range(offset,len(colVec)):
             if colVec[-n]<=value-tolerance:
                 return -n
         raise IndexError("No Index found where a value is smaller than {:7.1E}, invalid limits at column:".format(value)+repr(column))
@@ -212,10 +209,10 @@ class Data:
                 return -n
         raise IndexError("No Index found where a value is greater than {:7.1E}, invalid limits at column:".format(value)+repr(column))
     
-    def getFirstIndexWhereSmallerOrEq(self,column,value,tolerance=0):
+    def getFirstIndexWhereSmallerOrEq(self,column,value,tolerance=0, offset=0):
         data=self.getData()
         colVec=data[:,column-1]
-        for n in range(0,len(colVec)):
+        for n in range(offset,len(colVec)):
             if colVec[n]<=value-tolerance:
                 return n
         raise IndexError("No Index found where a value is greater than {:7.1E}, invalid limits at column:".format(value)+repr(column))
