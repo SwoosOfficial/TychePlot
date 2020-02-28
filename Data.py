@@ -5,6 +5,7 @@
 
 import numpy as np
 import Filereader
+import copy
 
 
 # In[2]:
@@ -66,7 +67,7 @@ class Data:
     
     @classmethod
     def processDataAndReturnArray(cls, data, function, x=False, y=True, xCol=1, yCol=2, **kwargs):
-        data = data.getData()
+        data = copy.deepcopy(data.getData())
         if (x == True):
             data[range(0,len(data)),[xCol-1]*len(data)] = function(data[range(0,len(data)),[xCol-1]*len(data)])
         if (y == True):
@@ -185,12 +186,19 @@ class Data:
         return result
         
     
-    def getFirstIndexWhereGreaterOrEq(self,column,value,tolerance=0):
+    def getFirstIndexWhereGreaterOrEq(self,column,value,tolerance=0, check_seq=1):
         data=self.getData()
         colVec=data[:,column-1]
         for n in range(0,len(colVec)):
             if colVec[n]>=value-tolerance:
-                return n
+                #print("Index {}: Value {} bigger than {}".format(n,colVec[n],value))
+                prev=True
+                for i in range(1,check_seq):
+                    prev= prev and colVec[n+i]>=value-tolerance
+                    #if prev:
+                        #print("And Index {}: Value {} bigger than {}".format(n+i,colVec[n+i],value))
+                if prev:
+                    return n
         raise IndexError("No Index found where a value is greater than {:7.1E}, invalid limits at column:".format(value)+repr(column))
     
     def getLastIndexWhereSmallerOrEq(self,column,value,tolerance=0, offset=1):
