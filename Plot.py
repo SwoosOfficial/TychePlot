@@ -850,7 +850,9 @@ class Plot():
                 self.logErr=self.calcLogErr(self.expectData,self.deviaData)
             else:
                 self.expectData, self.deviaData=self.concentenate_data()
-            
+            #for expect,devia in zip(self.expectData,self.deviaData):
+            #    expect.xCol=self.xCol
+            #    devia.xCol=self.xCol
             self.averageProcessed=True
         return self.expectData, self.deviaData
     

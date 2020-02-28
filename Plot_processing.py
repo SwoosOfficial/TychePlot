@@ -131,11 +131,20 @@ def plot(
         name=name+add_name
     if feature == "both":
         presentPlots=copy.deepcopy(desiredPlots)
-        desiredPlots=desiredPlots+[presentPlot["custom"].update(present) for presentPlot in presentPlots]
+        for presentPlot in presentPlots:
+            try:
+                presentPlot["custom"].update(present)
+            except KeyError:
+                presentPlot["custom"]=present      
+        desiredPlots=desiredPlots+presentPlots
     elif feature == "default":
         pass
     elif feature == "present":
-        desiredPlots=[presentPlot["custom"].update(present) for presentPlot in desiredPlots]
+        for desiredPlot in desiredPlots:
+            try:
+                desiredPlot["custom"].update(present)
+            except KeyError:
+                desiredPlot["custom"]=present   
     else:
         raise ValueError("No Such Feature")
     return calc(name, fileList, desiredPlots, inputParameters, plot_class, optionalParameterDict=optionalParameters, multithreaded=multithreaded)

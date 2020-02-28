@@ -37,6 +37,14 @@ class SpectraPlot(Plot):
     chars=list(string.ascii_uppercase) #alphabetUppercase
     convFac=(h*c)/e #eV*nm
     
+    
+    wavelength=1
+    intensity_wavelength=2
+    spectralRadiance_wavelength=3
+    energy=4
+    intensity_energy=5
+    spectralRadiance_energy=6
+    
     @classmethod
     def wavelengthToEV(cls,wavelength,spectralRadiance):
         energy=wavelength**-1*cls.convFac #eV
@@ -132,7 +140,11 @@ class SpectraPlot(Plot):
         if self.filename is None:
             string=self.name.replace(" ","")+self.fill+"spectra"
         else:
-            string=self.filename
+            string=self.filename    
+        if self.xCol == SpectraPlot.wavelength:
+            string+=self.fill+self.showColLabel[self.showCol].replace(" ","")
+        else:
+            string+=self.fill+self.showColLabel[self.showCol].replace(" ","")+"vs"+self.showColLabel[self.xCol].replace(" ","") 
         if not self.scaleX == 1:
             string+=self.fill+"scaledWith{:03.0f}Pct".format(self.scaleX*100)
         if self.filenamePrefix is not None:
@@ -156,76 +168,53 @@ class SpectraPlot(Plot):
         else:
             return
     
+    def __sub_processData(self, data, yCol, backg=None):
+        try:
+            if backg is None:
+                raise TypeError
+            energy,specRad=self.wavelengthToEV(data.getSplitData2D(xCol=1, yCol=yCol)[0], data.getSplitData2D(xCol=1,yCol=yCol)[1]- data.getSplitData2D(xCol=1,yCol=backg)[1])
+            data.setData(Data.mergeData((data.getSplitData2D(xCol=1, yCol=yCol)[0], data.getSplitData2D(xCol=1,yCol=yCol)[1]- data.getSplitData2D(xCol=1,yCol=backg)[1],data.getSplitData2D(xCol=1,yCol=yCol)[1]- data.getSplitData2D(xCol=1,yCol=backg)[1],energy,specRad,specRad)))
+        except (IndexError,TypeError):
+            energy,specRad=self.wavelengthToEV(*data.getSplitData2D(xCol=1, yCol=yCol))
+            data.setData(Data.mergeData((data.getSplitData2D(xCol=1, yCol=yCol)[0],data.getSplitData2D(xCol=1,yCol=yCol)[1],data.getSplitData2D(xCol=1,yCol=yCol)[1],energy,specRad,specRad)))
+        data.processData(self.noNegatives, yCol=2)
+        data.processData(self.noNegatives, yCol=3)
+        data.processData(self.noNegatives, yCol=5)
+        data.processData(self.noNegatives, yCol=6)
+        self.process_normalization(data)
+        data.limitData(xLim=self.xLimOrig)
+        self.dataProcessed=True
+        return
+    
     def processData(self):
         if not self.dataProcessed:
             if self.validYTable is not None:
                 if self.bgfile is None:
                     for device, validYCol in zip(self.dataList, self.validYTable):
                         for data, yCol, bg in zip(device, validYCol, self.bgYCol):
-                            try:
-                                energy,specRad=self.wavelengthToEV(data.getSplitData2D(xCol=1, yCol=yCol)[0], data.getSplitData2D(xCol=1,yCol=yCol)[1]- data.getSplitData2D(xCol=1,yCol=bg)[1])
-                                data.setData(Data.mergeData((data.getSplitData2D(xCol=1, yCol=yCol)[0], data.getSplitData2D(xCol=1,yCol=yCol)[1]- data.getSplitData2D(xCol=1,yCol=bg)[1],data.getSplitData2D(xCol=1,yCol=yCol)[1]- data.getSplitData2D(xCol=1,yCol=bg)[1],energy,specRad,specRad)))
-                            except (IndexError,TypeError):
-                                energy,specRad=self.wavelengthToEV(*data.getSplitData2D(xCol=1, yCol=yCol))
-                                data.setData(Data.mergeData((data.getSplitData2D(xCol=1, yCol=yCol)[0],data.getSplitData2D(xCol=1,yCol=yCol)[1],data.getSplitData2D(xCol=1,yCol=yCol)[1],energy,specRad,specRad)))
-                            data.processData(self.noNegatives, yCol=2)
-                            data.processData(self.noNegatives, yCol=3)
-                            data.processData(self.noNegatives, yCol=5)
-                            data.processData(self.noNegatives, yCol=6)
-                            self.process_normalization(data)
-                            data.limitData(xLim=self.xLimOrig)
-                            self.dataProcessed=True
+                            self.__sub_processData(data, yCol, backg=bg) 
+
                 else:
                     bg=fileToNpArray(self.bgfile, **self.fileFormat)[0][:,1]
                     for device, validYCol in zip(self.dataList, self.validYTable):
                         for data, yCol in zip(device,validYCol):
-                            try:
-                                energy,specRad=self.wavelengthToEV(data.getSplitData2D(xCol=1, yCol=yCol)[0], data.getSplitData2D(xCol=1,yCol=yCol)[1]- bg)
-                                data.setData(Data.mergeData((data.getSplitData2D(xCol=1, yCol=yCol)[0], data.getSplitData2D(xCol=1,yCol=yCol)[1]- bg,data.getSplitData2D(xCol=1,yCol=yCol)[1]- bg,energy,specRad,specRad)))
-                            except (IndexError,TypeError):
-                                energy,specRad=self.wavelengthToEV(*data.getSplitData2D(xCol=1, yCol=yCol))
-                                data.setData(Data.mergeData((data.getSplitData2D(xCol=1, yCol=yCol)[0],data.getSplitData2D(xCol=1,yCol=yCol)[1],data.getSplitData2D(xCol=1,yCol=yCol)[1],energy,specRad,specRad)))
-                            data.processData(self.noNegatives, yCol=2)
-                            data.processData(self.noNegatives, yCol=3)
-                            data.processData(self.noNegatives, yCol=5)
-                            data.processData(self.noNegatives, yCol=6)
-                            self.process_normalization(data)
-                            data.limitData(xLim=self.xLimOrig)
-                            self.dataProcessed=True
+                            self.__sub_processData(data, yCol, backg=bg)
             else:
                 if self.bgfile is None:
                     for device in self.dataList:
+                        while len(self.validYCol)>len(device):
+                            device.append(copy.deepcopy(device[-1]))
+                        while len(self.validYCol)>len(self.bgYCol):
+                            self.bgYCol.append(self.bgYCol[-1])
                         for data, yCol, bg in zip(device, self.validYCol, self.bgYCol):
-                            try:
-                                energy,specRad=self.wavelengthToEV(data.getSplitData2D(xCol=1, yCol=yCol)[0], data.getSplitData2D(xCol=1,yCol=yCol)[1]- data.getSplitData2D(xCol=1,yCol=bg)[1])
-                                data.setData(Data.mergeData((data.getSplitData2D(xCol=1, yCol=yCol)[0], data.getSplitData2D(xCol=1,yCol=yCol)[1]- data.getSplitData2D(xCol=1,yCol=bg)[1],data.getSplitData2D(xCol=1,yCol=yCol)[1]- data.getSplitData2D(xCol=1,yCol=bg)[1],energy,specRad,specRad)))
-                            except (IndexError,TypeError):
-                                energy,specRad=self.wavelengthToEV(*data.getSplitData2D(xCol=1, yCol=yCol))
-                                data.setData(Data.mergeData((data.getSplitData2D(xCol=1, yCol=yCol)[0],data.getSplitData2D(xCol=1,yCol=yCol)[1],data.getSplitData2D(xCol=1,yCol=yCol)[1],energy,specRad,specRad)))
-                            data.processData(self.noNegatives, yCol=2)
-                            data.processData(self.noNegatives, yCol=3)
-                            data.processData(self.noNegatives, yCol=5)
-                            data.processData(self.noNegatives, yCol=6)
-                            self.process_normalization(data)
-                            data.limitData(xLim=self.xLimOrig)
-                            self.dataProcessed=True
+                            self.__sub_processData(data, yCol, backg=bg)
                 else:
                     bg=fileToNpArray(self.bgfile, **self.fileFormat)[0][:,1]
                     for device in self.dataList:
+                        while len(self.validYCol)>len(device):
+                            device.append(copy.deepcopy(device[-1]))
                         for data, yCol in zip(device,self.validYCol):
-                            try:
-                                energy,specRad=self.wavelengthToEV(data.getSplitData2D(xCol=1, yCol=yCol)[0], data.getSplitData2D(xCol=1,yCol=yCol)[1]- bg)
-                                data.setData(Data.mergeData((data.getSplitData2D(xCol=1, yCol=yCol)[0], data.getSplitData2D(xCol=1,yCol=yCol)[1]- bg,data.getSplitData2D(xCol=1,yCol=yCol)[1]- bg,energy,specRad,specRad)))
-                            except (IndexError,TypeError):
-                                energy,specRad=self.wavelengthToEV(*data.getSplitData2D(xCol=1, yCol=yCol))
-                                data.setData(Data.mergeData((data.getSplitData2D(xCol=1, yCol=yCol)[0],data.getSplitData2D(xCol=1,yCol=yCol)[1],data.getSplitData2D(xCol=1,yCol=yCol)[1],energy,specRad,specRad)))
-                            data.processData(self.noNegatives, yCol=2)
-                            data.processData(self.noNegatives, yCol=3)
-                            data.processData(self.noNegatives, yCol=5)
-                            data.processData(self.noNegatives, yCol=6)
-                            self.process_normalization(data)
-                            data.limitData(xLim=self.xLimOrig)
-                            self.dataProcessed=True
+                            self.__sub_processData(data, yCol, backg=bg)
         
                 if self.postprocess_normalization:
                     maximum_values=[]

@@ -105,11 +105,40 @@ class OLEDPlot(Plot):
         return cur_o
     
     @classmethod
-    def generateFileList(cls, prefix, pixels=pixels_default_qty, subdir="", samples=4, fill="_", alphaOffset=0, truthTable=None, postfix=""):
-        generatedList=[[subdir+prefix+fill+cls.chars[sample+alphaOffset]+postfix+fill+str(pixel+1) for pixel in range(0,pixels)] for sample in range(0,samples)]#
+    def generateFileList(cls, prefix, pixels=pixels_default_qty, subdir="", samples=4, fill="_", alphaOffset=0, truthTable=None, postfix="", update_by_existing=True, century="20", fileFormat=jvl_file_format_default):
+        if update_by_existing:
+            files = os.listdir(subdir)
+            keys = list(set([file.split(fill)[0]+file.split(fill)[1] for file in files]))
+            keys = [key for key in keys if key.startswith(prefix)]
+            fileZ=[]
+            for key in keys:
+                subfiles=[]
+                for file in files:
+                    dated_measurement=False
+                    try:
+                        if file.split(fill)[2]+file.split(fill)[3] == key:
+                            dated_measurement=True
+                    except IndexError:
+                        dated_measurement=False
+                    if file.split(fill)[0]+file.split(fill)[1] == key or dated_measurement:
+                        subfiles.append(subdir+file[:-len(fileFormat["fileEnding"])])
+                subfiles.sort()
+                fileZ.append(subfiles)
+            fileZ.sort()
+            generatedList=fileZ
+        else:
+            generatedList=[[subdir+prefix+fill+cls.chars[sample+alphaOffset]+postfix+fill+str(pixel+1) for pixel in range(0,pixels)] for sample in range(0,samples)]#
         if truthTable is None:
             return generatedList
-        return [[sample for truth,sample in zip(truthTableForSample,sampleList) if truth] for truthTableForSample,sampleList in zip(truthTable,generatedList)]
+        returningList=[]
+        for truthTableForSample,sampleList in zip(truthTable,generatedList):
+            sampleSubList=[]
+            for truth,sample in zip(truthTableForSample,sampleList):
+                if truth:
+                    sampleSubList.append(sample)
+            #if sampleList != []:
+            returningList.append(sampleSubList)
+        return returningList
        
     @classmethod    
     def get_valid_pixel_by_user(cls, series_indicator, jvl_file_format=jvl_file_format_default, **kwargs):
@@ -390,7 +419,8 @@ class OLEDPlot(Plot):
                     subDataList=[]
                     volt=data.getSplitData2D(xCol=1, yCol=2)[0]
                     subDataList.append(volt)
-                    subDataList.append(data.getSplitData2D(xCol=1, yCol=2)[1]) #Current [2]  
+                    current=data.getSplitData2D(xCol=1, yCol=2)[1]
+                    subDataList.append(current) #Current [2]  
                     dens=Data.processDataAndReturnArray(data, self.curToDensity)[:,1]
                     subDataList.append(dens) #Current_density [3]
                     lum=Data.processDataAndReturnArray(data, self.photToCandela, yCol=3)[:,2]
@@ -409,10 +439,10 @@ class OLEDPlot(Plot):
                     if self.xLim is not None:
                         try:
                             if self.limCol is None:
-                                nList.append(data.getFirstIndexWhereGreaterOrEq(self.xCol,self.xLim[0]))
+                                nList.append(data.getFirstIndexWhereGreaterOrEq(self.xCol,self.xLim[0]), check_seq=3)
                                 mList.append(data.getLastIndexWhereSmallerOrEq(self.xCol,self.xLim[1]))
                             else:
-                                n=data.getFirstIndexWhereGreaterOrEq(self.limCol,self.xLim[0])
+                                n=data.getFirstIndexWhereGreaterOrEq(self.limCol,self.xLim[0], check_seq=3)
                                 nList.append(n)
                                 if self.noSweepBackMeasured or self.skipSweepBack:
                                     mList.append(data.getLastIndexWhereSmallerOrEq(self.limCol,self.xLim[1]))
@@ -422,7 +452,7 @@ class OLEDPlot(Plot):
                         except IndexError as ie:
                             
                             l=len(data.getData()[:,0])
-                            #warnings.warn("Invalid Limits at column "+str(ie)[-1:]+" with value "+str(ie)[45:52])
+                            warnings.warn("Invalid Limits at column "+str(ie)[-1:]+" with value "+str(ie)[45:52])
                 try:
                     if validData:
                         n=max(nList)
@@ -658,7 +688,8 @@ class OLEDCustomFileListPlot(OLEDPlot):
                  filename=None,
                  colorOffset=0,
                  **kwargs):
-        OLEDPlot.__init__(self, name, fileList, filename=filename, ax2LegendLabelAddString=" Luminance", **kwargs)
+        OLEDPlot.__init__(self, name, fileList, filename=filename, #ax2LegendLabelAddString=" Luminance",
+                          **kwargs)
         self.expectData=[]
         self.deviaData=[] 
         self.colorOffset=colorOffset
