@@ -156,6 +156,8 @@ class SpectraPlot(Plot):
         if self.normalizeMode == "global":
             string+=self.fill+"globally"
             string+=self.fill+"normalised"
+        if self.rainbowMode:
+            string+=self.fill+"rainbow"
         return string+option
     
     def process_normalization(self, data):
@@ -188,6 +190,7 @@ class SpectraPlot(Plot):
     
     def processData(self):
         if not self.dataProcessed:
+            print(self.validYTable)
             if self.validYTable is not None:
                 if self.bgfile is None:
                     for device, validYCol in zip(self.dataList, self.validYTable):
