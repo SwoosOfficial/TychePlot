@@ -212,7 +212,7 @@ class Plot():
                  showColAxType=[None,"lin","lin","lin"],
                  xAxisLim=None,
                  showColAxLim=[None,None,None,None],
-                 colors=['#1f77b4','#d62728','#2ca02c','#9467bd','#8c564b','#e377c2','#7f7f7f','#ff7f0e','#bcbd22','#17becf','#f8e520'],
+                 colors=['#1f77b4','#d62728','#9467bd','#8c564b','#e377c2','#7f7f7f','#ff7f0e','#bcbd22','#17becf','#f8e520','#2ca02c'],
                  linestyles=["-","--",":","-."],
                  markers=["o","^","s","p","P","*"],
                  iterLinestyles=False,
@@ -314,7 +314,7 @@ class Plot():
             self.showColLabel=showColLabel
         self.useTex=useTex
         if self.useTex:
-            mpl.use("pgf")
+            #mpl.use("pgf")
             self.showColLabelUnit=showColLabelUnit
         else:
             mpl.use("Qt5Agg")
@@ -494,12 +494,15 @@ class Plot():
     def __initTex(self, customFontsize=None):
         #self._resetRcParams()
         pgf_with_lualatex={
-                "pgf.texsystem": pgfSys,
+                #"pgf.texsystem": pgfSys,
                 "font.family": "sans-serif", # use serif/main font for text elements
                 "font.sans-serif": [self.font],
+                "mathtext.fallback_to_cm": False,
                 "mathtext.fontset":"custom",
+                "mathtext.tt": self.font,
                 "mathtext.rm": self.font,
                 "mathtext.sf": self.font,
+                "mathtext.it": self.font,
                 "font.size": self.customFontsize[0],
                 "axes.labelsize": self.customFontsize[1],               # LaTeX default is 10pt font.
                 "legend.fontsize": self.customFontsize[2],               # Make the legend/label fonts a little smaller
@@ -507,7 +510,8 @@ class Plot():
                 "ytick.labelsize": self.customFontsize[4],
                 "text.usetex": True,    # use inline math for ticks
                 "pgf.rcfonts": False, 
-                "pgf.preamble": [r"\usepackage{amsmath}\usepackage{upgreek}"],
+                "pgf.preamble": r"\usepackage{amsmath}\usepackage{upgreek}",#"#\usepackage{lmodern}\usepackage{fontspec}\setmainfont{Latin Modern Sans}",
+                "text.latex.preamble": r"\usepackage{amsmath}\usepackage{upgreek}\usepackage{sfmath}",#"\usepackage{lmodern}\usepackage{fontspec}\setmainfont{Latin Modern Sans}",
                 "lines.markersize": self.markerSize
             }
         if self.customFontsize is not None and len(self.customFontsize) == 5:
@@ -1014,6 +1018,8 @@ class Plot():
             if self.showColAxType[self.xCol] == "log":
                 ax.set_xscale("log")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
             ax.set_ylabel(self.axYLabel)
+            #ax.set_xticklabels(ax.get_xticks())
+            
             try:
                 if self.showColAxType[self.showCol] == "log":
                     ax.set_yscale("log", nonposy="clip")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
@@ -1044,6 +1050,9 @@ class Plot():
                         ax2.set_yscale("log")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
                     if self.ax2YLim is not None:
                         ax2.set_ylim(*self.ax2YLim)
+                    #ax2.set_yticklabels(ax.get_yticks(), fontfamily=["DejaVuSans","sans-serif"])
+            #ax.set_yticklabels(ax.get_yticks(), fontfamily=["DejaVuSans","sans-serif"], useTex=False)
+            #ax.set_yticklabels(ax.get_yticks(), fontfamily=["DejaVuSans","sans-serif"])
             self.dataList=self.processData()
             self.expectData, self.deviaData=self.processAverage()
             if self.fitList is not None and not self.alreadyFitted:
