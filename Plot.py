@@ -676,6 +676,7 @@ class Plot():
                 raise
         
     def processFileName(self, option=".pdf"):
+        string=""
         if self.filename is None:
             if self.showCol2 == 0:
                 string+=self.name.replace(" ","")+self.fill+self.showColLabel[self.showCol].replace(" ","")
