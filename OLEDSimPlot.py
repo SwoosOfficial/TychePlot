@@ -1,5 +1,6 @@
 import numpy as np
 from Plot import Plot
+import matplotlib as mpl
 
 class OLEDSimPlot(Plot):
 
@@ -87,7 +88,7 @@ class OLEDSimPlot(Plot):
 
 class Material:
     iD=0
-    def __init__(self, thickness, CBLike, name="Unknown Material", x=0, y=0, vacY=0, dim=10**-10, metallic=False, height=0, outsourceDesc=None):
+    def __init__(self, thickness, CBLike, name="Unknown Material", x=0, y=0, vacY=0, dim=10**-10, metallic=False, height=0, outsourceDesc=None, desc_x_offset=0):
         self.name=name
         self.thickness = thickness
         self.CBLike = CBLike
@@ -98,6 +99,7 @@ class Material:
         self.metallic=metallic
         self.height=height
         self.outsourceDesc=outsourceDesc
+        self.desc_x_offset=desc_x_offset
         self.id = Material.iD+1
         Material.iD=Material.iD+1
     def __repr__(self):
@@ -199,26 +201,35 @@ class Stack:
                     m.vacY=[d-m.CBLike for d in m.y]
                     ax.plot(np.asarray(m.x)*plot.x_scale,np.asarray(m.y)*e**-1, color=Stack.C[b-1], label=m.name)
                     ax.fill_between(np.asarray(m.x)*plot.x_scale,x_min,np.asarray(m.y)*e**-1, interpolate=True, facecolor=Stack.C[b-1], alpha=0.3)
-                    ax.text(m.x[(len(m.x)-1)//2]*plot.x_scale,(m.y[0]+plot.x_min*e)/2*e**-1+m.height,m.name, ha="center", va="center")
+                    ax.text((m.x[(len(m.x)-1)//2]+m.desc_x_offset)*plot.x_scale,(m.y[0]+plot.x_min*e)/2*e**-1+m.height,m.name, ha="center", va="center")
                     ax.plot(np.asarray(m.x)*plot.x_scale,np.asarray(m.vacY)*e**-1, "k-",label="Vacuum")
                 elif b==2 and plot.metalContactCathode:
                     m.y=plot.V_0(m.x,a, 3*plot.offsetCathode)
                     m.vacY=[d-m.CBLike for d in m.y]
                     ax.plot(np.asarray(m.x)*plot.x_scale,np.asarray(m.y)*e**-1, color=Stack.C[b-1], label=m.name)
                     ax.fill_between(np.asarray(m.x)*plot.x_scale,plot.x_min,np.asarray(m.y)*e**-1, interpolate=True, facecolor=Stack.C[b-1], alpha=0.3)
-                    ax.text(m.x[(len(m.x)-1)//2]*plot.x_scale,(m.y[0]+plot.x_min*e)/2*e**-1+m.height,m.name, ha="center", va="center")
+                    ax.text((m.x[(len(m.x)-1)//2]+m.desc_x_offset)*plot.x_scale,(m.y[0]+plot.x_min*e)/2*e**-1+m.height,m.name, ha="center", va="center")
                     ax.plot(np.asarray(m.x)*plot.x_scale,np.asarray(m.vacY)*e**-1, "k-",label="Vacuum")
                 else:
                     m.y=plot.V_0(m.x,m.CBLike, b)
                     m.vacY=plot.V_0(m.x,0,b)
-                    ax.plot(np.asarray(m.x)*plot.x_scale,np.asarray(m.y)*e**-1, color=Stack.C[b-1], label=m.name)
-                    ax.fill_between(np.asarray(m.x)*plot.x_scale,plot.x_min,np.asarray(m.y)*plot.e**-1,interpolate=True, facecolor=Stack.C[b-1], alpha=0.3)
-                    ax.text(m.x[(len(m.x)-1)//2]*plot.x_scale,(m.y[0]+plot.x_min*plot.e)/2*plot.e**-1+m.height,m.name, ha="center", va="center")
+                    if b==-2:
+                        ax.plot(np.asarray(m.x)*plot.x_scale+0.25,np.asarray(m.y)*e**-1, color=Stack.C[b-1], label=m.name)
+                        ax.fill_between(np.hstack([m.x,[m.x[-1]+0.5/plot.x_scale]])*plot.x_scale,plot.x_min,np.hstack([m.y,[m.y[-1]]])*plot.e**-1,interpolate=True, facecolor=Stack.C[b-1], alpha=0.3)
+                    elif b==2:
+                        ax.plot(np.asarray(m.x)*plot.x_scale-0.25,np.asarray(m.y)*e**-1, color=Stack.C[b-1], label=m.name)
+                        ax.fill_between(np.hstack([[m.x[0]-0.5/plot.x_scale],m.x])*plot.x_scale,plot.x_min,np.hstack([[m.y[0]],m.y])*plot.e**-1,interpolate=True, facecolor=Stack.C[b-1], alpha=0.3)
+                    else:
+                        ax.plot(np.asarray(m.x)*plot.x_scale,np.asarray(m.y)*e**-1, color=Stack.C[b-1], label=m.name)
+                        ax.fill_between(np.asarray(m.x)*plot.x_scale,plot.x_min,np.asarray(m.y)*plot.e**-1,interpolate=True, facecolor=Stack.C[b-1], alpha=0.3)
+                    ax.text((m.x[(len(m.x)-1)//2]+m.desc_x_offset)*plot.x_scale,(m.y[0]+plot.x_min*e)/2*e**-1+m.height,m.name, ha="center", va="center")
                     ax.plot(np.asarray(m.x)*plot.x_scale,np.asarray(m.vacY)*plot.e**-1, "k-")
         if plot.titleBool:
             ax.set_title(plot.title, fontsize=plot.titleFontSize)
         ax.set_ylim(plot.x_min, plot.V+1)
-        ax.grid(which="major",ls=":",alpha=0.25, axis="y")
+        ax.set_xlim(*plot.axXLim)
+        ax.yaxis.set_major_locator(mpl.ticker.MultipleLocator(1))
+        ax.grid(which="major",ls=":",alpha=0.5, axis="y")
         plt.tight_layout()
         plot.saveFig()
         return [plot,plot.processFileName(option=".pdf")] #filename
