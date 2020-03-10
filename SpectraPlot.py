@@ -190,7 +190,6 @@ class SpectraPlot(Plot):
     
     def processData(self):
         if not self.dataProcessed:
-            print(self.validYTable)
             if self.validYTable is not None:
                 if self.bgfile is None:
                     for device, validYCol in zip(self.dataList, self.validYTable):
@@ -409,7 +408,7 @@ class SpectraPlot(Plot):
                             arprps=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n], edgecolor=self.fitColors[n], linewidth=mpl.rcParams["lines.linewidth"])
                             ax.annotate(s=se, size=sze, xy=xsy, xytext=fitter.textPos, arrowprops=arprps)
             except Exception as e:
-                pass
+                print(e)
                 
 
 
