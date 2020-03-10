@@ -218,7 +218,7 @@ class Plot():
                  iterLinestyles=False,
                  linestyleOffset=0,
                  iterMarkers=False,
-                 markerOffset=0,
+                 #markerOffset=0,
                  showColLabel=None,
                  showColLabelUnitNoTex=[None,"X","Y","Y2"],
                  showColLabelUnit=[None,"X","Y","Y2"],
@@ -277,6 +277,7 @@ class Plot():
                  showLines=True,
                  showMarkers=False,
                  markerSize=6.0,
+                 markerFillstyles=['full','none'],
                  subdir=None,
                  #ax_aspect='auto',
                 ):
@@ -391,7 +392,7 @@ class Plot():
         self.markers=markers
         self.linestyleOffset=linestyleOffset
         self.iterMarkers=iterMarkers
-        self.markerOffset=markerOffset
+        #self.markerOffset=markerOffset
         if iterLinestyles:
             self.ls=linestyles[0]
             self.ax2ls=linestyles[0]
@@ -446,6 +447,7 @@ class Plot():
         self.no_plot=no_plot
         self.partialFitLabels=partialFitLabels
         self.markerSize=markerSize
+        self.markerFillstyles=markerFillstyles
         #self.ax_aspect=ax_aspect
         #inits
         #if mpl_use == "pgf":
@@ -876,7 +878,7 @@ class Plot():
     def afterPlot(self):
         return
     
-    def processPlotSub(self, n, ls, mk, ax2ls, ax2mk, ax1color, ax2color, data):
+    def processPlotSub(self, n, ls, mk, fs, ax2ls, ax2mk, ax2fs, ax1color, ax2color, data):
         colors=self.colors
         labels=self.labels
         xCol=self.xCol
@@ -890,6 +892,8 @@ class Plot():
         ax2linestyles=ax2ls
         ax2markerstyles=ax2mk
         expectData=data
+        fillstyles=fs
+        ax2fillstyles=ax2fs
         try:
             labelY=labels[n]+" "+self.showColLabel[self.showCol]
         except TypeError:
@@ -897,16 +901,16 @@ class Plot():
         if self.show[n][0]:
             if self.errors[n][0]:
                 try:
-                    AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol), yerr=[self.logErr[self.errorTypeDown][n][:,showCol-1],self.logErr[self.errorTypeUp][n][:,showCol-1]], c=ax1color[n], capsize=self.capsize, capthick=self.capthick , ls=linestyles[n], marker=markerstyles[n], label=labelY, errorevery=self.showErrorOnlyEvery[n])
+                    AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol), yerr=[self.logErr[self.errorTypeDown][n][:,showCol-1],self.logErr[self.errorTypeUp][n][:,showCol-1]], c=ax1color[n], capsize=self.capsize, capthick=self.capthick , ls=linestyles[n], marker=markerstyles[n], label=labelY, errorevery=self.showErrorOnlyEvery[n], fillstyle=fillstyles[n])
                 except TypeError:
                     for singleShowCol,singleLabelY in zip(showCol,labelY):
-                        AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=singleShowCol), yerr=[self.logErr[self.errorTypeDown][n][:,showCol-1],self.logErr[self.errorTypeUp][n][:,showCol-1]], c=ax1color[n], capsize=self.capsize, capthick=self.capthick, ls=linestyles[n], marker=markerstyles[n], label=singleLabelY, errorevery=self.showErrorOnlyEvery[n])
+                        AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=singleShowCol), yerr=[self.logErr[self.errorTypeDown][n][:,showCol-1],self.logErr[self.errorTypeUp][n][:,showCol-1]], c=ax1color[n], capsize=self.capsize, capthick=self.capthick, ls=linestyles[n], marker=markerstyles[n], label=singleLabelY, errorevery=self.showErrorOnlyEvery[n], fillstyle=fillstyles[n])
             else:
                 try:
-                    AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol), c=ax1color[n], ls=linestyles[n], marker=markerstyles[n], label=labelY)
+                    AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol), c=ax1color[n], ls=linestyles[n], marker=markerstyles[n], label=labelY, fillstyle=fillstyles[n])
                 except TypeError:
                     for singleShowCol,singleLabelY in zip(showCol,labelY):
-                        AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=singleShowCol), c=ax1color[n], ls=linestyles[n], marker=markerstyles[n], label=singleLabelY)
+                        AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=singleShowCol), c=ax1color[n], ls=linestyles[n], marker=markerstyles[n], label=singleLabelY, fillstyle=fillstyles[n])
             if self.fitList is not None and self.fitterList[n] is not None:
                 if type(self.fitterList[n]) is list:
                     for fitter in self.fitterList[n]:
@@ -930,16 +934,16 @@ class Plot():
                     labelZ=[labels[n]+" "+self.showColLabel[singleShowCol2] for singleShowCol2 in showCol2]
             if self.errors[n][1]:
                 try:
-                    AX2=ax2.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol2), yerr=[self.logErr[self.ax2errorTypeDown][n][:,showCol2-1],self.logErr[self.ax2errorTypeUp][n][:,showCol2-1]], capsize=self.capsize, capthick=self.capthick, c=ax2color[n], ls=ax2linestyles[n], marker=ax2markerstyles[n], label=labelZ,  errorevery=self.showErrorOnlyEvery[n])
+                    AX2=ax2.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol2), yerr=[self.logErr[self.ax2errorTypeDown][n][:,showCol2-1],self.logErr[self.ax2errorTypeUp][n][:,showCol2-1]], capsize=self.capsize, capthick=self.capthick, c=ax2color[n], ls=ax2linestyles[n], marker=ax2markerstyles[n], label=labelZ,  errorevery=self.showErrorOnlyEvery[n], fillstyle=ax2fillstyles[n])
                 except TypeError:
                     for singleShowCol2,singleLabelZ in zip(showCol2,labelZ):
-                        AX2=ax2.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=singleShowCol2), yerr=[self.logErr[self.ax2errorTypeDown][n][:,showCol2-1],self.logErr[self.ax2errorTypeUp][n][:,showCol2-1]], capsize=self.capsize, capthick=self.capthick, c=ax2color[n], ls=ax2linestyles[n], marker=ax2markerstyles[n], label=singleLabelZ,  errorevery=self.showErrorOnlyEvery[n])
+                        AX2=ax2.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=singleShowCol2), yerr=[self.logErr[self.ax2errorTypeDown][n][:,showCol2-1],self.logErr[self.ax2errorTypeUp][n][:,showCol2-1]], capsize=self.capsize, capthick=self.capthick, c=ax2color[n], ls=ax2linestyles[n], marker=ax2markerstyles[n], label=singleLabelZ,  errorevery=self.showErrorOnlyEvery[n], fillstyle=ax2fillstyles[n])
             else:
                 try:
-                    AX2=ax2.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol2), c=ax2color[n], ls=ax2linestyles[n], marker=ax2markerstyles[n], label=labelZ)
+                    AX2=ax2.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol2), c=ax2color[n], ls=ax2linestyles[n], marker=ax2markerstyles[n], label=labelZ, fillstyle=ax2fillstyles[n])
                 except TypeError:
                     for singleShowCol2,singleLabelZ in zip(showCol2,labelZ):
-                        AX2=ax2.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=singleShowCol2), c=ax2color[n], ls=ax2linestyles[n], marker=ax2markerstyles[n], label=singleLabelZ)
+                        AX2=ax2.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=singleShowCol2), c=ax2color[n], ls=ax2linestyles[n], marker=ax2markerstyles[n], label=singleLabelZ, fillstyle=ax2fillstyles[n])
             if self.fitList is not None and self.fitterList[n] is not None:
                 if type(self.fitterList[n]) is list:
                     for fitter in self.fitterList[n]:
@@ -982,7 +986,7 @@ class Plot():
             ax2color=self.colors
         if self.iterMarkers:
             markers=self.markers
-            ax2markers=self.markers[::-self.markerOffset]
+            ax2markers=self.markers#[::-self.markerOffset]
             ax1color=[self.ax1color]*len(expectData)
             ax2color=[self.ax2color]*len(expectData)
         else:
@@ -993,6 +997,8 @@ class Plot():
             ax2markers=[self.ax2mk]*len(expectData)
             ax1color=self.colors
             ax2color=self.colors
+        fillstyles=[self.markerFillstyles[0]]*len(expectData)
+        ax2fillstyles=[self.markerFillstyles[1]]*len(expectData)
         mk=[""]*len(markers)
         ls=[""]*len(linestyles)
         ax2mk=[""]*len(ax2markers)
@@ -1006,7 +1012,7 @@ class Plot():
                 ax2ls[n]=ax2linestyles[n]
             if showMarkers[n][1]:
                 ax2mk[n]=ax2markers[n]
-            self.processPlotSub(n, ls, mk, ax2ls, ax2mk, ax1color, ax2color, expectData)
+            self.processPlotSub(n, ls, mk, fillstyles, ax2ls, ax2mk, ax2fillstyles, ax1color, ax2color, expectData)
 
     def doPlot(self):
 
