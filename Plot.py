@@ -6,7 +6,7 @@
 pgfSys="lualatex"
 
 import matplotlib as mpl
-#mpl.use("pgf")
+mpl.use("pgf")
 import numpy as np
 import scipy.interpolate as inter
 import matplotlib.pyplot
@@ -496,7 +496,7 @@ class Plot():
     def __initTex(self, customFontsize=None):
         #self._resetRcParams()
         pgf_with_lualatex={
-                #"pgf.texsystem": pgfSys,
+                "pgf.texsystem": pgfSys,
                 "font.family": "sans-serif", # use serif/main font for text elements
                 "font.sans-serif": [self.font],
                 "mathtext.fallback_to_cm": False,
@@ -657,17 +657,27 @@ class Plot():
     
     
     def saveFig(self):
-        if self.useTex:
-            matplotlib.pyplot.savefig(self.processFileName(option=".pdf"), bbox_inches='tight')
-            matplotlib.pyplot.savefig(self.processFileName(option=".pgf"), bbox_inches='tight')
-        else:
-            #matplotlib.pyplot.show()
-            matplotlib.pyplot.savefig(self.processFileName(option=".png"))
+        try:
+            if self.useTex:
+                self.fig.savefig(self.processFileName(option=".pdf"), bbox_inches='tight')
+                self.fig.savefig(self.processFileName(option=".pgf"), bbox_inches='tight')
+            else:
+                #matplotlib.pyplot.show()
+                self.fig.savefig(self.processFileName(option=".png"))
+        except ValueError:
+            if self.useTex:
+                self.fig.savefig(self.processFileName(option=".pdf"))
+                self.fig.savefig(self.processFileName(option=".pgf"))
+            else:
+                #matplotlib.pyplot.show()
+                self.fig.savefig(self.processFileName(option=".png"))
             
     def processFileName_makedirs(self):
         try:
             folder=os.path.dirname(self.filenamePrefix)
             os.makedirs(folder)
+        except TypeError:
+            pass
         except FileExistsError as e:
             if e.errno != 17:
                 raise
