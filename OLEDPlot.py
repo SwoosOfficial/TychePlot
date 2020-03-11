@@ -393,10 +393,11 @@ class OLEDPlot(Plot):
             string+=self.fill+"scaledWith{:03.0f}Pct".format(self.scaleX*100)
         if self.filenamePrefix is not None or self.filenamePrefix != "":
             self.processFileName_makedirs()
-            if self.filenamePrefix[-1] == os.sep:
-                string=self.filenamePrefix+string
-            else:
-                string=self.filenamePrefix+self.fill+string
+            if self.filenamePrefix is not None:
+                if self.filenamePrefix[-1] == os.sep:
+                    string=self.filenamePrefix+string
+                else:
+                    string=self.filenamePrefix+self.fill+string
         return string+option
 
     def processData(self):
