@@ -511,9 +511,9 @@ class Plot():
                 "xtick.labelsize": self.customFontsize[3],
                 "ytick.labelsize": self.customFontsize[4],
                 "text.usetex": True,    # use inline math for ticks
-                "pgf.rcfonts": False, 
-                "pgf.preamble": r"\usepackage{amsmath}\usepackage{upgreek}",#"#\usepackage{lmodern}\usepackage{fontspec}\setmainfont{Latin Modern Sans}",
-                "text.latex.preamble": r"\usepackage{amsmath}\usepackage{upgreek}\usepackage{sfmath}",#"\usepackage{lmodern}\usepackage{fontspec}\setmainfont{Latin Modern Sans}",
+                "pgf.rcfonts": True, 
+                "pgf.preamble": r"\usepackage{amsmath}\usepackage{upgreek}\usepackage{lmodern}\usepackage{sfmath}",#"#\usepackage{lmodern}\usepackage{fontspec}\setmainfont{Latin Modern Sans}",
+                "text.latex.preamble": r"\usepackage{amsmath}\usepackage{upgreek}\usepackage{lmodern}\usepackage{sfmath}",#"\usepackage{lmodern}\usepackage{fontspec}\setmainfont{Latin Modern Sans}",
                 "lines.markersize": self.markerSize
             }
         if self.customFontsize is not None and len(self.customFontsize) == 5:
