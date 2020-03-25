@@ -2,19 +2,11 @@
 # coding: utf-8
 
 import copy
+from multiprocessing import Process, Queue, Manager
 
-inputParameters={}
-fileList=[]
-name=""
-optionalParameters={
-    "customLims":False,
-    "xOrigLims":[None,None,None,None],
-    "yAxisLims":[None,None,None,None],
-    "scaled":False
-}
-cls=None
+TIMEOUT_PLOT=30
 
-def initPlot(xCol=1, showColTup=(2,3), customInputParameters=None):
+def initPlot(name, fileList, inputParameters, cls, optionalParameters, xCol=1, showColTup=(2,3), customInputParameters=None):
     local_inputParameters=copy.deepcopy(inputParameters)
     if customInputParameters is not None:
         local_inputParameters.update(customInputParameters)
@@ -22,10 +14,16 @@ def initPlot(xCol=1, showColTup=(2,3), customInputParameters=None):
             local_optionalParameters=customInputParameters["optionalParameters"]
             local_inputParameters.pop("optionalParameters")
         except KeyError:
-            local_optionalParameters=copy.deepcopy(optionalParameters)
+            if optionalParameters is not None:
+                local_optionalParameters=copy.deepcopy(optionalParameters)
+            else:
+                local_optionalParameters=None
     else:
-        local_optionalParameters=copy.deepcopy(optionalParameters)
-    if local_optionalParameters["customLims"]:
+        if optionalParameters is not None:
+            local_optionalParameters=copy.deepcopy(optionalParameters)
+        else:
+            local_optionalParameters=None
+    if local_optionalParameters is not None and local_optionalParameters["customLims"]:
         try:
             xLimOrig=local_optionalParameters["xOrigLims"][showColTup[0]]
         except TypeError:
@@ -48,9 +46,9 @@ def initPlot(xCol=1, showColTup=(2,3), customInputParameters=None):
                     showColTup=showColTup,
                     **local_inputParameters
         )
-    return [plot]
+    return plot
 
-def buildPlotList(desiredPlot):
+def buildPlot(desiredPlot, init_plot_args, queue=None, index=0):
     try:
         yCol2=desiredPlot["yCol2"]
     except KeyError:
@@ -68,64 +66,102 @@ def buildPlotList(desiredPlot):
     cusPara["xCol2"]=xCol2
     if desiredPlot["yCol"]==0 or desiredPlot["xCol"]==0:
         raise
-    return initPlot(xCol=desiredPlot["xCol"], showColTup=(desiredPlot["yCol"],yCol2), customInputParameters=cusPara)
+    plot_draft=initPlot(*init_plot_args, xCol=desiredPlot["xCol"], showColTup=(desiredPlot["yCol"],yCol2), customInputParameters=cusPara)
+    if queue is not None:
+        queue.put((index, plot_draft))
+        queue.task_done()
+        return
+    else:
+        return plot_draft
 
 
-def processPlotPair(plotpair):
-    return [plot.doPlot() for plot in plotpair]
+def calc_single_plot(plot, queue=None, index=0):
+    plot_result=plot.doPlot()
+    if queue is not None:
+        queue.put((index,plot_result))
+        queue.task_done()
+        return
+    else:
+        return plot_result
 
-
-def calc_plotList(plotList, pool=None):
-    if pool is None:
-        return [processPlotPair(plotPair) for plotPair in plotList]
-    return pool.map(processPlotPair,plotList)
-
-
-def calc(name_local, fileList_local, desiredPlots, inputParameters_local, cls_local, optionalParameterDict=None, multithreaded=True):
-    global name
-    global fileList
-    global cls
-    global inputParameters
-    global optionalParameters
-    name=name_local
-    fileList=fileList_local
-    cls=cls_local
-    inputParameters=inputParameters_local
-    if optionalParameterDict is not None:
-        optionalParameters=optionalParameterDict
+def calc(desiredPlots, init_plot_args, multithreaded=True):
+    #init_plot_args=[name, fileList, inputParameters, cls, optionalParameters]
     if multithreaded:
-        import os
-        from multiprocessing import Pool
-        pool = Pool(os.cpu_count())
-        plotList=pool.map(buildPlotList,desiredPlots)
-        multiOutput=calc_plotList(plotList, pool=pool)
-        pool.close()
+        building_processes=[]
+        plotting_processes=[]
+        index=0
+        manager=Manager()
+        plots_queue=manager.JoinableQueue()
+        results_queue=manager.JoinableQueue()
+        results=[]
+        for desiredPlot in desiredPlots:
+            p = Process(target=buildPlot, args=(desiredPlot, init_plot_args, plots_queue, index))
+            p.start()
+            building_processes.append(p)
+            index+=1
+        for i in range(0,index):
+            plot_draft_tup=plots_queue.get(True,TIMEOUT_PLOT)
+            p = Process(target=calc_single_plot(plot_draft_tup[1], results_queue, plot_draft_tup[0]))
+            p.start()
+            plotting_processes.append(p)
+        for p in building_processes:
+            p.join()
+        for p in plotting_processes:
+            p.join()
+        for i in range(0,index):
+            try:
+                results.append(results_queue.get_nowait())
+            except:
+                pass
+        results.sort()
+        output=[result[1] for result in results]
     else:
         #singlethreaded
-        plotList=[buildPlotList(desiredPlot) for desiredPlot in desiredPlots]
-        multiOutput=[processPlotPair(plotPair) for plotPair in plotList]
-    plots=[[plotOutput[0] for plotOutput in plotPair] for plotPair in multiOutput]
-    files=[[plotOutput[1] for plotOutput in plotPair] for plotPair in multiOutput]
-    return (plots,files)
-
+        plotList=[buildPlot(desiredPlot, init_plot_args) for desiredPlot in desiredPlots]
+        output=[calc_single_plot(plot_draft) for plot_draft in plotList]
+    return output
 
 def export_data(plots, **kwargs):
-    for plotpair in plots:
-        for plot in plotpair:
-            plot.processAllAndExport(**kwargs)
+    for plot in plots:
+        plot.processAllAndExport(**kwargs)
 
+def plot_list(plot_prop_list, multithreaded=True):
+    if multithreaded:
+        results_super=[]
+        plotting_super_processes=[]
+        manager=Manager()
+        results_super_queue=manager.JoinableQueue()
+        index=0
+        for plot_props in plot_prop_list:
+            p = Process(target=plot, args=(results_super_queue, index), kwargs=plot_props)
+            p.start()
+            plotting_super_processes.append(p)
+            index+=1
+        for p in plotting_super_processes:
+            p.join()
+        for i in range(0,index):
+            results_super.append(results_super_queue.get_nowait())
+        results_super.sort()
+        results_super=[result[1] for result in results_super]
+    else:
+        results_super=[plot(None,0,**plot_props) for plot_props in plot_prop_list]
+    return results_super
+    
+        
 def plot(
-         name,
-         fileList,
-         desiredPlots,
-         present,
-         inputParameters,
-         plot_class,
+         queue,
+         index,
+         name="",
+         fileList=[],
+         desiredPlots=[],
+         present_params={},
+         inputParameters={},
+         plot_class=None,
          optionalParameters={},
+         feature="both",
          multithreaded=True,
          title="", 
          add_name="",
-         feature="both",
         ):
     if add_name != "":
         name=name+add_name
@@ -147,7 +183,14 @@ def plot(
                 desiredPlot["custom"]=present   
     else:
         raise ValueError("No Such Feature")
-    return calc(name, fileList, desiredPlots, inputParameters, plot_class, optionalParameterDict=optionalParameters, multithreaded=multithreaded)
+    init_plot_args=[copy.deepcopy(name), copy.deepcopy(fileList), copy.deepcopy(inputParameters), copy.deepcopy(plot_class), copy.deepcopy(optionalParameters)]
+    result=copy.copy(calc(desiredPlots, init_plot_args, multithreaded=multithreaded))
+    if multithreaded:
+        queue.put((index,result))
+        queue.task_done()
+        return
+    else:
+        return result 
             
             
 def add_to_plot(plot, func, filename=None, labels=None, ls=None, errors=[False,False], show=[True, True], showLines=[True, True], showMarkers=[False,False]):
