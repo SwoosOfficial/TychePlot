@@ -5,7 +5,7 @@
 
 
 import matplotlib as mpl
-#mpl.use("pgf")
+#mpl.use("TkAgg")
 #import matplotlib.pyplot
 import numpy as np
 import scipy.interpolate as inter
@@ -145,6 +145,7 @@ class OLEDPlot(Plot):
         valid_pixel=[]
         valid_device=[]
         OLED_fileList=cls.generateFileList(series_indicator, **kwargs)
+        print(OLED_fileList)
         import matplotlib.pyplot as plt
         for sample in OLED_fileList:
             plt.clf()
