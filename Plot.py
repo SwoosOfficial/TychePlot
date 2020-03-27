@@ -80,17 +80,18 @@ class Plot():
             string+=str(element)+sep
         return string[:-len(sep)]
     
-    def concentenate_files(self, fileList):
+    @classmethod
+    def concentenate_files(cls, fileList, fileFormat={}, subdir="",  previous_subdir=""):
         try:
-            end=self.fileFormat["fileEnding"]
+            end=fileFormat["fileEnding"]
 
         except KeyError:
             end=""
         try:    
-            skip=self.fileFormat["skiplines"]
+            skip=fileFormat["skiplines"]
         except KeyError:
             skip=0
-        con_filename=fileList[0]+"concentenated"
+        con_filename=subdir+fileList[0][len(previous_subdir):]
         con_file=open(con_filename+end,"w")
         m=0
         for fname in fileList:
