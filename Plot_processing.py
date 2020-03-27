@@ -125,7 +125,7 @@ def export_data(plots, **kwargs):
     for plot in plots:
         plot.processAllAndExport(**kwargs)
 
-def plot_list(plot_prop_list, multithreaded=True):
+def calc_plot_list(plot_prop_list, multithreaded=True, directPlotInput=False):
     if multithreaded:
         results_super=[]
         plotting_super_processes=[]
@@ -133,7 +133,10 @@ def plot_list(plot_prop_list, multithreaded=True):
         results_super_queue=manager.JoinableQueue()
         index=0
         for plot_props in plot_prop_list:
-            p = Process(target=plot, args=(results_super_queue, index), kwargs=plot_props)
+            if directPlotInput:
+                p = Process(target=direct_plot, args=(plot_props,results_super_queue, index))
+            else:
+                p = Process(target=plot, args=(results_super_queue, index), kwargs=plot_props)
             p.start()
             plotting_super_processes.append(p)
             index+=1
@@ -144,10 +147,22 @@ def plot_list(plot_prop_list, multithreaded=True):
         results_super.sort()
         results_super=[result[1] for result in results_super]
     else:
-        results_super=[plot(None,0,**plot_props) for plot_props in plot_prop_list]
+        if directPlotInput:
+            [direct_plot(plot) for plot in plot_prop_list]
+        else:
+            results_super=[plot(None,0,**plot_props) for plot_props in plot_prop_list]
     return results_super
     
-        
+
+def direct_plot(plot, queue=None, index=0):
+    result=plot.doPlot()
+    if queue is not None:
+        queue.put((index,result))
+        queue.task_done()
+        return
+    else:
+        return result 
+    
 def plot(
          queue,
          index,
