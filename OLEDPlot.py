@@ -105,29 +105,32 @@ class OLEDPlot(Plot):
         return cur_o
     
     @classmethod
-    def generateFileList(cls, prefix, pixels=pixels_default_qty, subdir="", samples=4, fill="_", alphaOffset=0, truthTable=None, postfix="", update_by_existing=True, century="20", fileFormat=jvl_file_format_default):
-        if update_by_existing:
-            files = os.listdir(subdir)
-            keys = list(set([file.split(fill)[0]+file.split(fill)[1] for file in files]))
-            keys = [key for key in keys if key.startswith(prefix)]
-            fileZ=[]
-            for key in keys:
-                subfiles=[]
-                for file in files:
-                    dated_measurement=False
-                    try:
-                        if file.split(fill)[2]+file.split(fill)[3] == key:
-                            dated_measurement=True
-                    except IndexError:
+    def generateFileList(cls, prefix, pixels=pixels_default_qty, subdir="", samples=4, fill="_", alphaOffset=0, truthTable=None, postfix="", update_by_existing=True, century="20", fileFormat=jvl_file_format_default, files=None):
+        if files is None:
+            if update_by_existing:
+                files = os.listdir(subdir)
+                keys = list(set([file.split(fill)[0]+file.split(fill)[1] for file in files]))
+                keys = [key for key in keys if key.startswith(prefix)]
+                fileZ=[]
+                for key in keys:
+                    subfiles=[]
+                    for file in files:
                         dated_measurement=False
-                    if file.split(fill)[0]+file.split(fill)[1] == key or dated_measurement:
-                        subfiles.append(subdir+file[:-len(fileFormat["fileEnding"])])
-                subfiles.sort()
-                fileZ.append(subfiles)
-            fileZ.sort()
-            generatedList=fileZ
+                        try:
+                            if file.split(fill)[2]+file.split(fill)[3] == key:
+                                dated_measurement=True
+                        except IndexError:
+                            dated_measurement=False
+                        if file.split(fill)[0]+file.split(fill)[1] == key or dated_measurement:
+                            subfiles.append(subdir+file[:-len(fileFormat["fileEnding"])])
+                    subfiles.sort()
+                    fileZ.append(subfiles)
+                fileZ.sort()
+                generatedList=fileZ
+            else:
+                generatedList=[[subdir+prefix+fill+cls.chars[sample+alphaOffset]+postfix+fill+str(pixel+1) for pixel in range(0,pixels)] for sample in range(0,samples)]
         else:
-            generatedList=[[subdir+prefix+fill+cls.chars[sample+alphaOffset]+postfix+fill+str(pixel+1) for pixel in range(0,pixels)] for sample in range(0,samples)]#
+            generatedList=files
         if truthTable is None:
             return generatedList
         returningList=[]
@@ -141,11 +144,14 @@ class OLEDPlot(Plot):
         return returningList
        
     @classmethod    
-    def get_valid_pixel_by_user(cls, series_indicator, jvl_file_format=jvl_file_format_default, **kwargs):
+    def get_valid_pixel_by_user(cls, series_indicator, jvl_file_format=jvl_file_format_default, files=None, **kwargs):
         valid_pixel=[]
         valid_device=[]
-        OLED_fileList=cls.generateFileList(series_indicator, **kwargs)
-        print(OLED_fileList)
+        if files is None:
+            OLED_fileList=cls.generateFileList(series_indicator, **kwargs)
+        else:
+            OLED_fileList=files
+        #print(OLED_fileList)
         import matplotlib.pyplot as plt
         for sample in OLED_fileList:
             plt.clf()
