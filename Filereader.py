@@ -8,7 +8,7 @@ import numpy as np
 
 # In[5]:
 
-def fileToNpArray(filename, separator=",", skiplines=1, backoffset=0, lastlines=0, exceptColumns=[], commaToPoint=False, lastlineNoNewLine=False, fileEnding=None, transpose=False, ignoreRowCol=None):
+def fileToNpArray(filename, separator=",", skiplines=1, backoffset=0, lastlines=0, exceptColumns=[], commaToPoint=False, lastlineNoNewLine=False, fileEnding=None, transpose=False, ignoreRowCol=None, debug=False):
     if fileEnding is None:
         file = open(filename,"r")
     else:
@@ -20,7 +20,7 @@ def fileToNpArray(filename, separator=",", skiplines=1, backoffset=0, lastlines=
     yAxis = len(lines)
     preArray = []
     descList = []
-    fileToNpArray.array = []
+    fileToNpArray.array = np.asarray([0.0], dtype=np.float64)
     try:
         for x in range(0, skiplines):
             oriItem = lines[x]
@@ -51,7 +51,8 @@ def fileToNpArray(filename, separator=",", skiplines=1, backoffset=0, lastlines=
             for n in preArray:
                 for a,b in zip(exceptColumns, range(0,len(exceptColumns))):
                     del n[a-b]
-        #print(preArray)
+        if debug:
+            print(preArray)
         fileToNpArray.array = np.asarray(preArray, dtype=np.float64)
         if transpose:
             fileToNpArray.array=np.transpose(fileToNpArray.array)
@@ -60,19 +61,24 @@ def fileToNpArray(filename, separator=",", skiplines=1, backoffset=0, lastlines=
         raise Exception("Error importing file: "+ filename+": "+str(err)+" at line "+str(x+skiplines))
     return fileToNpArray.array, descList
 
-def npArrayToFile(filename, array, preString=None, separator=",", fileEnding=None):
+def npArrayToFile(filename, array, preString=None, separator=",", fileEnding=None, skiplines=1, linefeed="\n", **kwargs):
     if fileEnding is None:
         file = open(filename,"w")
     else:
         file = open(filename+fileEnding,"w")
     if preString is not None:
+        skiplines-=preString.count(linefeed)
         file.write(preString)
+    if skiplines>=1:
+        line=separator
+        for n in range(0,skiplines):
+            file.write(line+linefeed)
     for n in range(0,len(array)):
         line=""
         for element in array[n]:
             line+=str(element)+separator
         line=line[:-len(separator)]
-        file.write(line+"\n")
+        file.write(line+linefeed)
     file.close()
 
 
