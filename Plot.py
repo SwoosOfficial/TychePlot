@@ -913,7 +913,11 @@ class Plot():
         if self.show[n][0]:
             if self.errors[n][0]:
                 try:
-                    AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol), yerr=[self.logErr[self.errorTypeDown][n][:,showCol-1],self.logErr[self.errorTypeUp][n][:,showCol-1]], c=ax1color[n], capsize=self.capsize, capthick=self.capthick , ls=linestyles[n], marker=markerstyles[n], label=labelY, errorevery=self.showErrorOnlyEvery[n], fillstyle=fillstyles[n])
+                    try:
+                        yerr=[self.logErr[self.errorTypeDown][n][:,showCol-1],self.logErr[self.errorTypeUp][n][:,showCol-1]]
+                    except IndexError:
+                        yerr=None
+                    AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol), yerr=yerr, c=ax1color[n], capsize=self.capsize, capthick=self.capthick , ls=linestyles[n], marker=markerstyles[n], label=labelY, errorevery=self.showErrorOnlyEvery[n], fillstyle=fillstyles[n])
                 except TypeError:
                     for singleShowCol,singleLabelY in zip(showCol,labelY):
                         AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=singleShowCol), yerr=[self.logErr[self.errorTypeDown][n][:,showCol-1],self.logErr[self.errorTypeUp][n][:,showCol-1]], c=ax1color[n], capsize=self.capsize, capthick=self.capthick, ls=linestyles[n], marker=markerstyles[n], label=singleLabelY, errorevery=self.showErrorOnlyEvery[n], fillstyle=fillstyles[n])
