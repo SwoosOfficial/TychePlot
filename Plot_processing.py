@@ -184,18 +184,18 @@ def plot(
         presentPlots=copy.deepcopy(desiredPlots)
         for presentPlot in presentPlots:
             try:
-                presentPlot["custom"].update(present)
+                presentPlot["custom"].update(present_params)
             except KeyError:
-                presentPlot["custom"]=present      
+                presentPlot["custom"]=present_params      
         desiredPlots=desiredPlots+presentPlots
     elif feature == "default":
         pass
     elif feature == "present":
         for desiredPlot in desiredPlots:
             try:
-                desiredPlot["custom"].update(present)
+                desiredPlot["custom"].update(present_params)
             except KeyError:
-                desiredPlot["custom"]=present   
+                desiredPlot["custom"]=present_params   
     else:
         raise ValueError("No Such Feature")
     init_plot_args=[copy.deepcopy(name), copy.deepcopy(fileList), copy.deepcopy(inputParameters), copy.deepcopy(plot_class), copy.deepcopy(optionalParameters)]
