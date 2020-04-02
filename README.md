@@ -18,15 +18,24 @@ A collection of data handling scripts for plotting scienctific graphs. Based on 
 ## 1.0:
 *  TychePlot initial release
 
+## 2.0:
+*  Simplified Notebooks for better workflow
+
+## 3.0:
+*  Complete Multiprocessing overhaul with high data combination flexibility
+
 # 3. Known Issues
-* Wrong Limits raise different uncaught errors. In that case omit limits.
+* Wrong Limits could raise uncaugt latex errors.
+* First time running OLEDPlot has to be done without the mpl.use("pgf") in Plot.py (wip)
 
 # 4. List of containing scripts
 
 * Plot
+* PlotQV
 * OLEDPlot
 * OLEDSimPlot
 * SpectraPlot
 * ReflectoPlot
 * ProfiloPlot
 * AngularPlot
+* KelvinProbePlot
