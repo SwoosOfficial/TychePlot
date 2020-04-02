@@ -36,7 +36,7 @@ class SpectraPlot(Plot):
     #ProgKonst
     chars=list(string.ascii_uppercase) #alphabetUppercase
     convFac=(h*c)/e #eV*nm
-    
+    sigma_to_FWHM=2*np.sqrt(2*np.log(2))
     
     wavelength=1
     intensity_wavelength=2
@@ -111,11 +111,13 @@ class SpectraPlot(Plot):
                  averageMedian=False,
                  errors=False,
                  xParamPos=0,
+                 FWHMParamPos=2,
                  rainbowMode=False,
                  fitColors=['#1f77b4','#d62728','#2ca02c','#9467bd','#8c564b','#e377c2','#7f7f7f','#ff7f0e','#bcbd22','#17becf','#f8e520'],
                  bgfile=None,
                  validYTable=None,
                  normalizeMode="single",
+                 showFWHM=False,
                  **kwargs
                 ):
         if rainbowMode:
@@ -133,6 +135,8 @@ class SpectraPlot(Plot):
         self.bgfile=bgfile
         self.validYTable=validYTable
         self.normalizeMode=normalizeMode
+        self.showFWHM=showFWHM
+        self.FWHMParamPos=FWHMParamPos
         self.postprocess_normalization=False
         #self.dataList=self.importData()
    
@@ -231,6 +235,26 @@ class SpectraPlot(Plot):
         return self.dataList
     
     
+    def process_annotation(self, param_pos, tp, n, data, fitter, yoffset_fac=0.1, fstring="Emission at \n{:3.0f}\\,nm / {:3.2f}\\,eV", fwhm_string="Peak: {:3.0f}\\,nm / {:3.2f}\\,eV\nFWHM: {:3.0f}\\,nm / {:3.0f}\\,"):
+        if self.showFWHM:  
+            peak=fitter.params[self.xParamPos+param_pos]
+            FWHM=self.sigma_to_FWHM*fitter.params[self.FWHMParamPos+param_pos]
+            if FWHM < 1:
+                fstring=fwhm_string+"meV"
+                ev_FWHM=np.round(FWHM*1000,decimals=0)
+            else:
+                fstring=fwhm_string+"eV"
+                ev_FWHM=np.round(FWHM,decimals=2)
+            FWHM_nm=self.convFac*(1/(peak-FWHM/2)-1/(peak+FWHM/2))
+            se=fstring.format(np.round(self.convFac/fitter.params[self.xParamPos+param_pos],decimals=0),
+                              np.round(fitter.params[self.xParamPos+param_pos],decimals=2),
+                              np.round(FWHM_nm,decimals=0),
+                              ev_FWHM)
+        else:
+            se=fstring.format(np.round(self.convFac/fitter.params[self.xParamPos+param_pos],decimals=0),
+                              np.round(fitter.params[self.xParamPos+param_pos],decimals=2))
+        return self.ax.annotate(s=se, size=self.customFontsize[2], xy=(fitter.params[self.xParamPos+param_pos],np.amax(data)-yoffset_fac*np.amax(data)), xytext=tp, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n+1+param_pos//3], edgecolor=self.fitColors[n+1+param_pos//3], linewidth=mpl.rcParams["lines.linewidth"]))
+            
     def plotDoubleGauss(self,fitter,n):
         xdata=fitter.CurveData.getSplitData2D()[0]
         ydata1=self.gauss(xdata, *fitter.params[0:3])
@@ -246,11 +270,9 @@ class SpectraPlot(Plot):
             tp1=textPos
             tp2=textPos2
         self.ax.errorbar(xdata, ydata1, c=self.fitColors[n+1], ls=self.fitLs, label="Partial mono-Gaussian fit", alpha=self.fitAlpha)
-        se="Emission at \n{:3.0f}\\,nm / {:3.2f}\\,eV".format(np.round(self.convFac/fitter.params[self.xParamPos],decimals=0),np.round(fitter.params[self.xParamPos],decimals=2))
-        self.ax.annotate(s=se, size=self.customFontsize[2], xy=(fitter.params[self.xParamPos],np.amax(ydata1)-0.1*np.amax(ydata1)), xytext=tp1, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n+1], edgecolor=self.fitColors[n+1], linewidth=mpl.rcParams["lines.linewidth"]))
+        self.process_annotation(0,tp1,n,ydata1,fitter)
         self.ax.errorbar(xdata, ydata2, c=self.fitColors[n+2], ls=self.fitLs, label="Partial mono-Gaussian fit", alpha=self.fitAlpha)
-        se2="Emission at \n{:3.0f}\\,nm / {:3.2f}\\,eV".format(np.round(self.convFac/fitter.params[self.xParamPos+3],decimals=0),np.round(fitter.params[self.xParamPos+3],decimals=2))
-        self.ax.annotate(s=se2, size=self.customFontsize[2], xy=(fitter.params[self.xParamPos+3],np.amax(ydata2)-0.1*np.amax(ydata2)), xytext=tp2, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n+2], edgecolor=self.fitColors[n+2], linewidth=mpl.rcParams["lines.linewidth"]))
+        self.process_annotation(3,tp2,n,ydata2,fitter)
         
     def plotTripleGauss(self,fitter,n):
         xdata=fitter.CurveData.getSplitData2D()[0]
@@ -292,16 +314,14 @@ class SpectraPlot(Plot):
                 tp1=textPos
         #fit1
         self.ax.errorbar(xdata, ydata1, c=self.fitColors[n+1], ls=self.fitLs, label="Partial mono-Gaussian fit", alpha=self.fitAlpha)
-        se="Emission at \n{:3.0f}\\,nm / {:3.2f}\\,eV".format(np.round(self.convFac/fitter.params[self.xParamPos],decimals=0),np.round(fitter.params[self.xParamPos],decimals=2))
-        self.ax.annotate(s=se, size=self.customFontsize[2], xy=(fitter.params[self.xParamPos],np.amax(ydata1)-0.1*np.amax(ydata1)), xytext=tp1, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n+1], edgecolor=self.fitColors[n+1], linewidth=mpl.rcParams["lines.linewidth"]))
+        self.process_annotation(0,tp1,n,ydata1,fitter)
         #fit2
         self.ax.errorbar(xdata, ydata2, c=self.fitColors[n+2], ls=self.fitLs, label="Partial mono-Gaussian fit", alpha=self.fitAlpha)
-        se2="Emission at \n{:3.0f}\\,nm / {:3.2f}\\,eV".format(np.round(self.convFac/fitter.params[self.xParamPos+3],decimals=0),np.round(fitter.params[self.xParamPos+3],decimals=2))
-        self.ax.annotate(s=se2, size=self.customFontsize[2], xy=(fitter.params[self.xParamPos+3],np.amax(ydata2)-0.1*np.amax(ydata2)), xytext=tp2, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n+2], edgecolor=self.fitColors[n+2], linewidth=mpl.rcParams["lines.linewidth"]))
+        self.process_annotation(3,tp2,n,ydata2,fitter)
         #fit3
         self.ax.errorbar(xdata, ydata3, c=self.fitColors[n+3], ls=self.fitLs, label="Partial mono-Gaussian fit", alpha=self.fitAlpha)
-        se3="Emission at \n{:3.0f}\\,nm / {:3.2f}\\,eV".format(np.round(self.convFac/fitter.params[self.xParamPos+6],decimals=0),np.round(fitter.params[self.xParamPos+6],decimals=2))
-        self.ax.annotate(s=se3, size=self.customFontsize[2], xy=(fitter.params[self.xParamPos+6],np.amax(ydata3)-0.1*np.amax(ydata3)), xytext=tp3, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n+3], edgecolor=self.fitColors[n+3], linewidth=mpl.rcParams["lines.linewidth"]))
+        self.process_annotation(6,tp3,n,ydata3,fitter)
+        
     
     def rect(self,x,y,w,h,c):
         polygon = matplotlib.pyplot.Rectangle((x,y),w,h,color=c)
