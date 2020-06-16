@@ -6,7 +6,7 @@
 pgfSys="lualatex"
 
 import matplotlib as mpl
-mpl.use("pgf")
+#mpl.use("pgf")
 import numpy as np
 import scipy.interpolate as inter
 import matplotlib.pyplot
@@ -280,6 +280,7 @@ class Plot():
                  markerSize=6.0,
                  markerFillstyles=['full','none'],
                  subdir=None,
+                 iterBoth=False,
                  #ax_aspect='auto',
                 ):
         #static inits
@@ -449,6 +450,7 @@ class Plot():
         self.partialFitLabels=partialFitLabels
         self.markerSize=markerSize
         self.markerFillstyles=markerFillstyles
+        self.iterBoth=iterBoth
         #self.ax_aspect=ax_aspect
         #inits
         #if mpl_use == "pgf":
@@ -1003,8 +1005,12 @@ class Plot():
         if self.iterMarkers:
             markers=self.markers
             ax2markers=self.markers#[::-self.markerOffset]
-            ax1color=[self.ax1color]*len(expectData)
-            ax2color=[self.ax2color]*len(expectData)
+            if self.iterBoth:
+                ax1color=self.colors
+                ax2color=self.colors
+            else:
+                ax1color=[self.ax1color]*len(expectData)
+                ax2color=[self.ax2color]*len(expectData)
         else:
             if isinstance(self.mk, list):
                 markers=self.mk
