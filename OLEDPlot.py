@@ -157,7 +157,7 @@ class OLEDPlot(Plot):
             plt.clf()
             for pixel in sample:
                 data=fileToNpArray(pixel, **jvl_file_format)[0]
-                plt.plot(data[:,0],data[:,1], label="Current - Px "+pixel[-1])
+                plt.plot(data[:,0],np.absolute(data[:,1]), label="Current - Px "+pixel[-1])
                 plt.plot(data[:,0],data[:,2], label="Photocurrent - Px "+pixel[-1])
             plt.yscale("log")
             plt.title(sample)
@@ -227,6 +227,7 @@ class OLEDPlot(Plot):
                  lumThresh=0.1,
                  spec_bg_file=None,
                  sweepOverride=None,
+                 invertedDevice=False,
                  **kwargs
                 ):
         self.sweepOverride=sweepOverride
@@ -266,6 +267,7 @@ class OLEDPlot(Plot):
         self.V_bi=V_bi
         self.curIdeal=curIdeal
         self.lumThresh=lumThresh
+        self.invertedDevice=invertedDevice
         #initmethods
         self.exportDataList=copy.deepcopy(self.dataList)
         self.spectralDataList=self.spectraDataImport()[0]
