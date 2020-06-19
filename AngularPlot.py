@@ -12,8 +12,8 @@ from Data import Data
 from Plot import Plot
 
 BLZ_path_dict= {
-                  500: "/home/tassilo/Documents/Data/TychePlot/angMeas/150-BLZ-500-nm.txt", 
-                  780: "/home/tassilo/Documents/Data/TychePlot/angMeas/100-BLZ-780-nm.txt"
+                  500: "../../TychePlot/angMeas/150-BLZ-500-nm.txt", 
+                  780: "../../TychePlot/angMeas/100-BLZ-780-nm.txt"
                 }
 
 class Line:
@@ -165,11 +165,6 @@ class AngularPlot(Plot):
                  showColLabel= ["", "Angle", "Intensity (s-polarised)", "Intensity (p-polarised)", "Intensity (s-polarised)", "Intensity (p-polarised)"],
                  showColLabelUnit=["", "Angle (°)", "s-polarised Intensity (a.u.)", "p-polarised Intensity (a.u)", "s-polarised Intensity (a.u.)", "p-polarised Intensity (a.u)"],
                 **kwargs):
-        Plot.__init__(self, name, fileList, dataImported=True, showColAxType=showColAxType,
-                 showColAxLim=showColAxLim,
-                 showColLabel=showColLabel,
-                 showColLabelUnit=showColLabelUnit, **kwargs)
-        
         self.BLZFiles=BLZFiles
         self.BLZFile=BLZFile
         self.index=index
@@ -177,6 +172,10 @@ class AngularPlot(Plot):
         self.wavelength=wavelength
         self.angle=angle
         self.plotSpectrum=plotSpectrum
+        Plot.__init__(self, name, fileList, dataImported=True, showColAxType=showColAxType,
+                 showColAxLim=showColAxLim,
+                 showColLabel=showColLabel,
+                 showColLabelUnit=showColLabelUnit, **kwargs)
         self.dataList=self.importData()
         
     def importData(self):
