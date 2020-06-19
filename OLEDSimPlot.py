@@ -153,7 +153,7 @@ class Stack:
         
     
     def plotStack(self, plot):
-        ax = plot._newFig()[1]
+        plot.fig, ax = plot._newFig()
         import matplotlib.pyplot as plt
         ax.set_xlabel(plot.showColLabelUnit[plot.xCol])
         ax.set_ylabel(plot.showColLabelUnit[plot.showCol])
@@ -227,7 +227,8 @@ class Stack:
         if plot.titleBool:
             ax.set_title(plot.title, fontsize=plot.titleFontSize)
         ax.set_ylim(plot.x_min, plot.V+1)
-        ax.set_xlim(*plot.axXLim)
+        if plot.axXLim is not None:
+            ax.set_xlim(*plot.axXLim)
         ax.yaxis.set_major_locator(mpl.ticker.MultipleLocator(1))
         ax.grid(which="major",ls=":",alpha=0.5, axis="y")
         plt.tight_layout()
