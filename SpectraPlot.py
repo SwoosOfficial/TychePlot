@@ -42,8 +42,8 @@ class SpectraPlot(Plot):
     intensity_wavelength=2
     spectralRadiance_wavelength=3
     energy=4
-    intensity_energy=5
-    spectralRadiance_energy=6
+    spectralRadiance_energy=5
+    intensity_energype=7
     
     @classmethod
     def wavelengthToEV(cls,wavelength,spectralRadiance):
@@ -87,6 +87,26 @@ class SpectraPlot(Plot):
         return amp*np.exp(-((x-mu)**2/(2*sigma**2)))*np.heaviside(x-mu,0)+amp*np.exp(-((x-mu)**2/(2*sigma2**2)))*np.heaviside(mu-x,0)
     
     @classmethod
+    def createNGauss(cls, N, defaults=[1,1,1]):
+        gauss_inp=list(defaults)*N
+        def NGauss(x, *gauss_inp):
+            val=0
+            for n in range(0,3*N,3):
+                val+=cls.gauss(x,*gauss_inp[n:n+3])
+            return val
+        return NGauss
+    
+    @classmethod
+    #see https://journals.aps.org/prapplied/supplemental/10.1103/PhysRevApplied.13.024061/SI-revised_final.pdf
+    def createFrankCondonGauss(cls, m, S=1, E_0=2, E_vib=0.2, amp=1, sigma=0.05):
+        def NFrankCGauss(E, S, E_0, E_vib, amp, sigma):
+            val=0
+            for n in range(0,m):
+                val+=(S**n)/(np.math.factorial(n))*np.exp(-S)*cls.gauss(E,E_0-n*E_vib, amp, sigma)
+            return val
+        return NFrankCGauss
+    
+    @classmethod
     def FWHMbySigma(cls, sigma):
         return sigma*2.3548
     
@@ -99,14 +119,14 @@ class SpectraPlot(Plot):
                  bgYCol=[None],
                  showColAxType=["lin","lin","lin","lin","lin","lin","lin"],
                  showColAxLim=[None,None,None,None,None,None,None],
-                 showColLabel= ["","Wavelength","Normalised Intensity", "Spectral Radiance", "Energy", "Normalised Intensity", "Spectral Radiance"],
+                 showColLabel= ["","Wavelength","Normalised Intensity", "Spectral Radiance", "Energy", "Normalised Intensity", "reduced Intensity"],
                  showColLabelUnit=["",
                   "Wavelength (nm)",
                   "Normalised Intensity",
                   "Spectral Radiance ($\\tfrac{\\mathrm{W}}{\\mathrm{sr}\\cdot \\mathrm{m}^2\\cdot \\mathrm{nm}}$)",                 
                   "Energy (eV)",
                   "Normalised Intensity", #energy scaled
-                  "Spectral Radiance ($\\tfrac{\\mathrm{W}}{\\mathrm{sr}\\cdot \\mathrm{m}^2\\cdot \\mathrm{eV}}$)"                 
+                  "Reduced Intensity ($\\tfrac{1}{\\mathrm{eV}}$)"                 
                  ],
                  averageMedian=False,
                  errors=False,
@@ -168,6 +188,7 @@ class SpectraPlot(Plot):
         if self.normalizeMode == 'single':
             data.processData(self.normalize, yCol=2)
             data.processData(self.normalize, yCol=5)
+            data.processData(self.normalize, yCol=6)
             self.postprocess_normalization=False
         elif self.normalizeMode == 'global':
             self.postprocess_normalization=True
@@ -179,10 +200,12 @@ class SpectraPlot(Plot):
             if backg is None:
                 raise TypeError
             energy,specRad=self.wavelengthToEV(data.getSplitData2D(xCol=1, yCol=yCol)[0], data.getSplitData2D(xCol=1,yCol=yCol)[1]- data.getSplitData2D(xCol=1,yCol=backg)[1])
-            data.setData(Data.mergeData((data.getSplitData2D(xCol=1, yCol=yCol)[0], data.getSplitData2D(xCol=1,yCol=yCol)[1]- data.getSplitData2D(xCol=1,yCol=backg)[1],data.getSplitData2D(xCol=1,yCol=yCol)[1]- data.getSplitData2D(xCol=1,yCol=backg)[1],energy,specRad,specRad)))
+            specRadpe=specRad/energy
+            data.setData(Data.mergeData((data.getSplitData2D(xCol=1, yCol=yCol)[0], data.getSplitData2D(xCol=1,yCol=yCol)[1]- data.getSplitData2D(xCol=1,yCol=backg)[1],data.getSplitData2D(xCol=1,yCol=yCol)[1]- data.getSplitData2D(xCol=1,yCol=backg)[1],energy,specRad,specRadpe)))
         except (IndexError,TypeError):
             energy,specRad=self.wavelengthToEV(*data.getSplitData2D(xCol=1, yCol=yCol))
-            data.setData(Data.mergeData((data.getSplitData2D(xCol=1, yCol=yCol)[0],data.getSplitData2D(xCol=1,yCol=yCol)[1],data.getSplitData2D(xCol=1,yCol=yCol)[1],energy,specRad,specRad)))
+            specRadpe=specRad/energy
+            data.setData(Data.mergeData((data.getSplitData2D(xCol=1, yCol=yCol)[0],data.getSplitData2D(xCol=1,yCol=yCol)[1],data.getSplitData2D(xCol=1,yCol=yCol)[1],energy,specRad,specRadpe)))
         data.processData(self.noNegatives, yCol=2)
         data.processData(self.noNegatives, yCol=3)
         data.processData(self.noNegatives, yCol=5)
@@ -232,13 +255,19 @@ class SpectraPlot(Plot):
                         for data in device:
                             data.processData(self.normalize, yCol=2, value=value, col=2)
                             data.processData(self.normalize, yCol=5, value=value, col=5)
+                            data.processData(self.normalize, yCol=6, value=value, col=6)
         return self.dataList
     
     
-    def process_annotation(self, param_pos, tp, n, data, fitter, yoffset_fac=0.1, fstring="Emission at \n{:3.0f}\\,nm / {:3.2f}\\,eV", fwhm_string="Peak: {:3.0f}\\,nm / {:3.2f}\\,eV\nFWHM: {:3.0f}\\,nm / {:3.0f}\\,"):
-        if self.showFWHM:  
+    def process_annotation(self, param_pos, tp, n, data, fitter, yoffset_fac=0.1, fstring="Emission at \n{:3.0f}\\,nm / {:3.2f}\\,eV", fwhm_string="Peak: {:3.0f}\\,nm / {:3.2f}\\,eV\nFWHM: {:3.0f}\\,nm / {:3.0f}\\,", override_xpos=None):
+        if override_xpos is not None:
+            peak=override_xpos
+            FWHMval=fitter.params[self.FWHMParamPos]
+        else:
             peak=fitter.params[self.xParamPos+param_pos]
-            FWHM=self.sigma_to_FWHM*fitter.params[self.FWHMParamPos+param_pos]
+            FWHMval=abs(fitter.params[self.FWHMParamPos+param_pos])
+        if self.showFWHM:
+            FWHM=self.sigma_to_FWHM*FWHMval
             if FWHM < 1:
                 fstring=fwhm_string+"meV"
                 ev_FWHM=np.round(FWHM*1000,decimals=0)
@@ -246,14 +275,14 @@ class SpectraPlot(Plot):
                 fstring=fwhm_string+"eV"
                 ev_FWHM=np.round(FWHM,decimals=2)
             FWHM_nm=self.convFac*(1/(peak-FWHM/2)-1/(peak+FWHM/2))
-            se=fstring.format(np.round(self.convFac/fitter.params[self.xParamPos+param_pos],decimals=0),
-                              np.round(fitter.params[self.xParamPos+param_pos],decimals=2),
+            se=fstring.format(np.round(self.convFac/peak,decimals=0),
+                              np.round(peak,decimals=2),
                               np.round(FWHM_nm,decimals=0),
                               ev_FWHM)
         else:
-            se=fstring.format(np.round(self.convFac/fitter.params[self.xParamPos+param_pos],decimals=0),
-                              np.round(fitter.params[self.xParamPos+param_pos],decimals=2))
-        return self.ax.annotate(s=se, size=self.customFontsize[2], xy=(fitter.params[self.xParamPos+param_pos],np.amax(data)-yoffset_fac*np.amax(data)), xytext=tp, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n+1+param_pos//3], edgecolor=self.fitColors[n+1+param_pos//3], linewidth=mpl.rcParams["lines.linewidth"]))
+            se=fstring.format(np.round(self.convFac/peak,decimals=0),
+                              np.round(peak,decimals=2))
+        return self.ax.annotate(s=se, size=self.customFontsize[2], xy=(peak,np.amax(data)-yoffset_fac*np.amax(data)), xytext=tp, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n+1+param_pos//3], edgecolor=self.fitColors[n+1+param_pos//3], linewidth=mpl.rcParams["lines.linewidth"]))
             
     def plotDoubleGauss(self,fitter,n):
         xdata=fitter.CurveData.getSplitData2D()[0]
@@ -322,6 +351,27 @@ class SpectraPlot(Plot):
         self.ax.errorbar(xdata, ydata3, c=self.fitColors[n+3], ls=self.fitLs, label="Partial mono-Gaussian fit", alpha=self.fitAlpha)
         self.process_annotation(6,tp3,n,ydata3,fitter)
         
+    
+    def plotNFrankCGauss(self,fitter,n,amp_thresh=0.1):
+        xdata=fitter.CurveData.getSplitData2D()[0]
+        ydataList=[]
+        self.FWHMParamPos=4
+        k=0
+        actual_amp=1
+        S,E_0,E_vib,amp,sigma = fitter.params
+        while actual_amp > amp_thresh:
+            pre_fac=(S**k)/(np.math.factorial(k))*np.exp(-S)
+            actual_amp=amp*pre_fac
+            ydataList.append(self.gauss(xdata,E_0-k*E_vib, actual_amp, sigma))
+            k+=1
+        m=1
+        for ydata in ydataList:
+            self.ax.errorbar(xdata, ydata, c=self.fitColors[n+m], ls=self.fitLs, label=f"Order {m} transition gaussian fit", alpha=self.fitAlpha)
+            self.process_annotation((m-1)*3,[fitter.textPos[0],fitter.textPos[1]-(m-1)*0.15],n,ydata,fitter, override_xpos=E_0-(m-1)*E_vib)
+            m+=1
+            
+        
+    
     
     def rect(self,x,y,w,h,c):
         polygon = matplotlib.pyplot.Rectangle((x,y),w,h,color=c)
@@ -398,6 +448,9 @@ class SpectraPlot(Plot):
                                 self.plotDoubleGauss(fitter,n)
                             if fitter.function == self.tripleGauss:
                                 self.plotTripleGauss(fitter,n)
+                            if fitter.function.__name__ == 'NFrankCGauss':
+                                print("inside")
+                                self.plotNFrankCGauss(fitter,n)
                             #annotation
                             if fitter.desc != None:
                                 if self.xCol!=4:
@@ -413,6 +466,8 @@ class SpectraPlot(Plot):
                             self.plotDoubleGauss(self.fitterList[n],n)
                         if self.fitterList[n].function == self.tripleGauss:
                             self.plotTripleGauss(self.fitterList[n],n)
+                        if self.fitterList[n].function.__name__ == 'NFrankCGauss':
+                            self.plotNFrankCGauss(self.fitterList[n],n)
                         #annotation
                         if self.fitterList[n].desc != None:
                             fitter=self.fitterList[n]
@@ -428,8 +483,9 @@ class SpectraPlot(Plot):
                             arprps=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n], edgecolor=self.fitColors[n], linewidth=mpl.rcParams["lines.linewidth"])
                             ax.annotate(s=se, size=sze, xy=xsy, xytext=fitter.textPos, arrowprops=arprps)
             except AttributeError as e:
-                pass
+                print(e)
             except Exception as e:
+                raise
                 print(e)
                 
 
