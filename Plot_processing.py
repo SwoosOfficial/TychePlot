@@ -148,7 +148,7 @@ def calc_plot_list(plot_prop_list, multithreaded=True, directPlotInput=False):
         results_super=[result[1] for result in results_super]
     else:
         if directPlotInput:
-            [direct_plot(plot) for plot in plot_prop_list]
+            results_super=[direct_plot(plot) for plot in plot_prop_list]
         else:
             results_super=[plot(None,0,**plot_props) for plot_props in plot_prop_list]
     return results_super
