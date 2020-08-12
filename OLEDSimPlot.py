@@ -20,6 +20,8 @@ class OLEDSimPlot(Plot):
             return [self.carrierType*wf if a>=0 else 0.0 for a in x]
         if b*self.offsetCathode==3:
             return [self.carrierType*wf+self.V*self.e if a>=0 else 0.0 for a in x]
+        else:
+            return [self.carrierType*wf if a>=0 else 0.0 for a in x]
 
     def V_1(self, x, wf, points,sigma=0.1*e, mu=0):
         z=np.random.normal(mu, sigma, points)

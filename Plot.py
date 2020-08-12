@@ -6,7 +6,7 @@
 pgfSys="lualatex"
 
 import matplotlib as mpl
-mpl.use("pgf")
+#mpl.use("pgf")
 import numpy as np
 import scipy.interpolate as inter
 import matplotlib.pyplot
