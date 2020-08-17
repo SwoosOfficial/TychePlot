@@ -1128,9 +1128,10 @@ class Plot():
         return [self,self.processFileName(option=".pdf")] #filename
     
     def processAllAndExport(self, **kwargs):
-        self.exportAllData(**kwargs)
+        return self.exportAllData(**kwargs)
     
     def exportAllData(self, subdir="export/", fileEnd=".csv", colSep=",", fill=None, errorTypes=None, errorString="Error of ", expectData=None, errData=None, noError=False):
+        filenames=[]
         if expectData is None:
             expectData=self.expectData
         if errData is None:
@@ -1152,7 +1153,9 @@ class Plot():
             if f.errno!=2:
                 raise
         for l in range(0,len(self.fileList)):
-            file = open(subdir+self.name.replace(" ","")+fill+self.labels[l].replace(" ","")+fileEnd,"w")
+            filename=subdir+self.name.replace(" ","")+fill+self.labels[l].replace(" ","")+fileEnd
+            filenames.append(filename)
+            file = open(filename,"w")
             line = ""
             n=0
             for label in self.showColLabelUnitNoTex:
@@ -1175,6 +1178,7 @@ class Plot():
                 line+="\n"
                 file.write(line)
             file.close()
+        return (self,filenames)
             
     
     def doPlotName(self):
