@@ -69,9 +69,9 @@ class Data:
     def processDataAndReturnArray(cls, data, function, x=False, y=True, xCol=1, yCol=2, **kwargs):
         data = copy.deepcopy(data.getData())
         if (x == True):
-            data[range(0,len(data)),[xCol-1]*len(data)] = function(data[range(0,len(data)),[xCol-1]*len(data)])
+            data[range(0,len(data)),[xCol-1]*len(data)] = function(data[range(0,len(data)),[xCol-1]*len(data)], **kwargs)
         if (y == True):
-            data[range(0,len(data)),[yCol-1]*len(data)] = function(data[range(0,len(data)),[yCol-1]*len(data)])
+            data[range(0,len(data)),[yCol-1]*len(data)] = function(data[range(0,len(data)),[yCol-1]*len(data)], **kwargs)
         return data
     
     
