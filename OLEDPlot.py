@@ -511,8 +511,7 @@ class OLEDPlot(Plot):
 
     def processData(self):
         if not self.dataProcessed:
-            self.processData_sub(self.dataList, self.spectralDataList, self.pixelsize_mm2)
-                
+            self.processData_sub(self.dataList, self.spectralDataList, self.pixelsize_mm2)     
         self.dataProcessed=True
         return self.dataList
 
@@ -520,8 +519,10 @@ class OLEDPlot(Plot):
         localDataList=self.importData()
         self.processData_sub(localDataList,self.spectralDataList,self.pixelsize_mm2)
         expectData, errData =self.calcCustomAverage(localDataList)
-        self.exportAllData(expectData=expectData, errData=errData, **kwargs)
-        return expectData, errData
+        self.expectData=expectData
+        self.deviaData=errData
+        return self.exportAllData(expectData=expectData, errData=errData, **kwargs)
+        
             
         
     def importData(self):
