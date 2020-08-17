@@ -24,6 +24,9 @@ A collection of data handling scripts for plotting scienctific graphs. Based on 
 ## 3.0:
 *  Complete Multiprocessing overhaul with high data combination flexibility
 
+### 3.1
+*  Device dependent Pixelsizes Added
+
 # 3. Known Issues
 * Wrong Limits could raise uncaugt latex errors.
 * First time running OLEDPlot has to be done without the mpl.use("pgf") in Plot.py (wip)
