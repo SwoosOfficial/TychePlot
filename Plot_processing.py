@@ -84,7 +84,7 @@ def calc_single_plot(plot, queue=None, index=0):
     else:
         return plot_result
 
-def calc(desiredPlots, init_plot_args, multithreaded=True):
+def calc(desiredPlots, init_plot_args, multithreaded=True, exportonly=False):
     #init_plot_args=[name, fileList, inputParameters, cls, optionalParameters]
     if multithreaded:
         building_processes=[]
@@ -101,7 +101,10 @@ def calc(desiredPlots, init_plot_args, multithreaded=True):
             index+=1
         for i in range(0,index):
             plot_draft_tup=plots_queue.get(True,TIMEOUT_PLOT)
-            p = Process(target=calc_single_plot(plot_draft_tup[1], results_queue, plot_draft_tup[0]))
+            if not exportonly:
+                p = Process(target=calc_single_plot(plot_draft_tup[1], results_queue, plot_draft_tup[0]))
+            else:
+                p = Process(target=export_single_plot(plot_draft_tup[1], results_queue, plot_draft_tup[0]))
             p.start()
             plotting_processes.append(p)
         for p in building_processes:
@@ -118,13 +121,25 @@ def calc(desiredPlots, init_plot_args, multithreaded=True):
     else:
         #singlethreaded
         plotList=[buildPlot(desiredPlot, init_plot_args) for desiredPlot in desiredPlots]
-        output=[calc_single_plot(plot_draft) for plot_draft in plotList]
+        if not exportonly:
+            output=[calc_single_plot(plot_draft) for plot_draft in plotList]
+        else:
+            output=[export_single_plot(plot_draft) for plot_draft in plotList]
     return output
 
 def export_data(plots, **kwargs):
     for plot in plots:
         plot.processAllAndExport(**kwargs)
 
+def export_single_plot(plot, queue=None, index=0, **kwargs):
+    plot_result=plot.processAllAndExport(**kwargs)  
+    if queue is not None:
+        queue.put((index,plot_result))
+        queue.task_done()
+        return
+    else:
+        return plot_result
+        
 def calc_plot_list(plot_prop_list, multithreaded=True, directPlotInput=False):
     if multithreaded:
         results_super=[]
