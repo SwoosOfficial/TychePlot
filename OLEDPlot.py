@@ -144,9 +144,10 @@ class OLEDPlot(Plot):
         return returningList
        
     @classmethod    
-    def get_valid_pixel_by_user(cls, series_indicator, jvl_file_format=jvl_file_format_default, files=None, **kwargs):
+    def get_valid_pixel_by_user(cls, series_indicator, jvl_file_format=jvl_file_format_default, files=None, font_sizes=(8,10,12), fig_size=(20,10),fill="_", **kwargs):
         valid_pixel=[]
         valid_device=[]
+        SMALL_SIZE, MEDIUM_SIZE, BIGGER_SIZE = font_sizes
         if files is None:
             OLED_fileList=cls.generateFileList(series_indicator, **kwargs)
         else:
@@ -154,18 +155,28 @@ class OLEDPlot(Plot):
         #print(OLED_fileList)
         import matplotlib.pyplot as plt
         for sample in OLED_fileList:
+            n=0
             plt.clf()
+            plt.figure(figsize=fig_size)
+            plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
+            plt.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title
+            plt.rc('axes', labelsize=MEDIUM_SIZE)    # fontsize of the x and y labels
+            plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+            plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+            plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
+            plt.rc('figure', titlesize=SMALL_SIZE)  # fontsize of the figure title
             for pixel in sample:
+                n+=1
                 data=fileToNpArray(pixel, **jvl_file_format)[0]
-                plt.plot(data[:,0],np.absolute(data[:,1]), label="Current - Px "+pixel[-1])
-                plt.plot(data[:,0],data[:,2], label="Photocurrent - Px "+pixel[-1])
+                plt.plot(data[:,0],np.absolute(data[:,1]), label="Current - Px "+pixel[-1], marker=f"${n}$", markersize=BIGGER_SIZE, alpha=0.7)
+                plt.plot(data[:,0],data[:,2], label="Photocurrent - Px "+pixel[-1], marker=f"${n}$", markersize=BIGGER_SIZE, ls="--", alpha=0.7)
             plt.yscale("log")
             plt.title(sample)
             plt.legend()
             plt.show()
             valid_pixels_input=input("Valid pixels")
             if len(valid_pixels_input)!=len(sample):
-                raise
+                raise IndexError("Invalid Input")
             valid_pixel.append([bool(int(pixel)) for pixel in valid_pixels_input])
             valid_device.append(int(valid_pixels_input) != 0)
         return valid_device, valid_pixel
@@ -328,17 +339,25 @@ class OLEDPlot(Plot):
         summe=np.sum([self.diodeData.getSplitData2D()[1][a]*spectralData.getSplitData2D()[1][a] for a in range(0,len(self.diodeData.getSplitData2D()[1]))])
         return rad*OLEDPlot.K_m*summe
     
-    def curToDensity(self,cur):
-        return cur*10**5/self.pixelsize_mm2; #converts A to mA/cm² 
+    def curToDensity(self,cur, pixelsize=None):
+        if pixelsize is None:
+            return cur*10**5/self.pixelsize_mm2; #converts A to mA/cm² 
+        return cur*10**5/pixelsize; #converts A to mA/cm² 
     
-    def densToCur(self,dens):
-        return dens*self.pixelsize_mm2/10**5; #converts mA/cm² to A
+    def densToCur(self,dens, pixelsize=None):
+        if pixelsize is None:
+            return dens*self.pixelsize_mm2/10**5; #converts mA/cm² to A
+        return dens*pixelsize/10**5;
     
-    def photToCandela(self,phot):
-        return phot*4.3*self.pixelsize_mm2**(-1)*10**10 #converts A to cd/m² Correction: pixelsize_mm2
+    def photToCandela(self,phot, pixelsize=None):
+        if pixelsize is None:
+            return phot*4.3*self.pixelsize_mm2**(-1)*10**10 #converts A to cd/m² Correction: pixelsize_mm2
+        return phot*4.3*pixelsize**(-1)*10**10 #converts A to cd/m² Correction: pixelsize_mm2
     
-    def candToPhotoCurr(self, cand):
-        return cand/(4.3*self.pixelsize_mm2**(-1)*10**10)
+    def candToPhotoCurr(self, cand, pixelsize=None):
+        if pixelsize is None:
+            return cand/(4.3*self.pixelsize_mm2**(-1)*10**10)
+        return cand/(4.3*pixelsize**(-1)*10**10)
     
     def candToRadiance(self,cand, spectralData): #converts cd/m² to W/(sr*m²)
         summe=np.sum([self.diodeData.getSplitData2D()[1][a]*spectralData.getSplitData2D()[1][a] for a in range(0,len(self.diodeData.getSplitData2D()[1]))])
@@ -409,141 +428,97 @@ class OLEDPlot(Plot):
                     string=self.filenamePrefix+self.fill+string
         return string+option
 
+    
+    def processData_sub_sub(self, deviceData, spectralData, pixelsize=None):
+        nList=[]
+        mList=[]
+        validData=False
+        l=0
+        for data in deviceData:
+            data.limitData(xLim=self.xLimOrig, xCol=self.xColOrig)
+            data.processData(self.remDarkCurr, yCol=3)
+            data.processData(OLEDPlot.absolute, yCol=2)
+            data.processData(OLEDPlot.removeZeros, yCol=2)
+            if self.averageSweepBack and not self.noSweepBackMeasured:
+                array=data.getData()
+                array1=array[:int(len(array))//2]
+                array2=array[int(len(array))//2:]
+                array2=array2[::-1]
+                array=[[a,b] for a,b in zip(array1,array2)]
+                result=np.average(array, axis=1)
+                data.setData(result)
+            subDataList=[]
+            volt=data.getSplitData2D(xCol=1, yCol=2)[0]
+            subDataList.append(volt)
+            current=data.getSplitData2D(xCol=1, yCol=2)[1]
+            subDataList.append(current) #Current [2]  
+            dens=Data.processDataAndReturnArray(data, self.curToDensity, pixelsize=pixelsize)[:,1]
+            subDataList.append(dens) #Current_density [3]
+            lum=Data.processDataAndReturnArray(data, self.photToCandela, yCol=3, pixelsize=pixelsize)[:,2]
+            subDataList.append(lum) #Luminance [4]
+            rad=self.candToRadiance(lum,spectralData)
+            subDataList.append(rad) #Radiance [5]
+            curEffic=OLEDPlot.calcCurEffic(dens,lum)
+            subDataList.append(curEffic) #Current_efficacy
+            lumEffic=OLEDPlot.calcLumEffic(subDataList[0],dens,lum)
+            subDataList.append(lumEffic) #Luminous_efficacy
+            eqe=self.calcEQE(dens,rad,spectralData)
+            subDataList.append(eqe) #EQE8
+            power=self.doubleLogSlope(np.abs(volt-self.V_bi),np.abs(dens))
+            subDataList.append(power) #power9
+            data.setData(Data.mergeData(subDataList))
+            if self.xLim is not None:
+                try:
+                    if self.limCol is None:
+                        nList.append(data.getFirstIndexWhereGreaterOrEq(self.xCol,self.xLim[0]), check_seq=3)
+                        mList.append(data.getLastIndexWhereSmallerOrEq(self.xCol,self.xLim[1]))
+                    else:
+                        n=data.getFirstIndexWhereGreaterOrEq(self.limCol,self.xLim[0], check_seq=3)
+                        nList.append(n)
+                        if self.noSweepBackMeasured or self.skipSweepBack:
+                            mList.append(data.getLastIndexWhereSmallerOrEq(self.limCol,self.xLim[1]))
+                        else:
+                            mList.append(-len(data.getData())//2)
+                    validData=True
+                except IndexError as ie:
+                    l=len(data.getData()[:,0])
+                    warnings.warn("Invalid Limits at column "+str(ie)[-1:]+" with value "+str(ie)[45:52])
+        try:
+            if validData:
+                n=max(nList)
+                m=min(mList)
+            else:
+                n=l
+                m=-1
+            for data in deviceData:
+                if m==-1:
+                    data.setData(data.getData()[n:])
+                else:
+                    data.setData(data.getData()[n:m+1])                  
+        except ValueError:
+            pass
+    
+    def processData_sub(self, dataList, spectralDataList, pixelsizes):
+        try:
+            if len(pixelsizes) == len(dataList):
+                for deviceData,spectralData,pixelsize in zip(dataList,spectralDataList,pixelsizes):
+                    self.processData_sub_sub(deviceData, spectralData, pixelsize=pixelsize)
+            else:
+                raise IndexError("Pixelsize list invalid")
+        except TypeError:
+            for deviceData,spectralData in zip(dataList, spectralDataList):
+                self.processData_sub_sub(deviceData, spectralData, pixelsize=None)
+
     def processData(self):
         if not self.dataProcessed:
-            for deviceData,spectralData in zip(self.dataList,self.spectralDataList):
-                nList=[]
-                mList=[]
-                validData=False
-                l=0
-                for data in deviceData:
-                    data.limitData(xLim=self.xLimOrig, xCol=self.xColOrig)
-                    data.processData(self.remDarkCurr, yCol=3)
-                    data.processData(OLEDPlot.absolute, yCol=2)
-                    data.processData(OLEDPlot.removeZeros, yCol=2)
-                    if self.averageSweepBack and not self.noSweepBackMeasured:
-                        array=data.getData()
-                        array1=array[:int(len(array))//2]
-                        array2=array[int(len(array))//2:]
-                        array2=array2[::-1]
-                        array=[[a,b] for a,b in zip(array1,array2)]
-                        result=np.average(array, axis=1)
-                        data.setData(result)
-                    subDataList=[]
-                    volt=data.getSplitData2D(xCol=1, yCol=2)[0]
-                    subDataList.append(volt)
-                    current=data.getSplitData2D(xCol=1, yCol=2)[1]
-                    subDataList.append(current) #Current [2]  
-                    dens=Data.processDataAndReturnArray(data, self.curToDensity)[:,1]
-                    subDataList.append(dens) #Current_density [3]
-                    lum=Data.processDataAndReturnArray(data, self.photToCandela, yCol=3)[:,2]
-                    subDataList.append(lum) #Luminance [4]
-                    rad=self.candToRadiance(lum,spectralData)
-                    subDataList.append(rad) #Radiance [5]
-                    curEffic=OLEDPlot.calcCurEffic(dens,lum)
-                    subDataList.append(curEffic) #Current_efficacy
-                    lumEffic=OLEDPlot.calcLumEffic(subDataList[0],dens,lum)
-                    subDataList.append(lumEffic) #Luminous_efficacy
-                    eqe=self.calcEQE(dens,rad,spectralData)
-                    subDataList.append(eqe) #EQE8
-                    power=self.doubleLogSlope(np.abs(volt-self.V_bi),np.abs(dens))
-                    subDataList.append(power) #power9
-                    data.setData(Data.mergeData(subDataList))
-                    if self.xLim is not None:
-                        try:
-                            if self.limCol is None:
-                                nList.append(data.getFirstIndexWhereGreaterOrEq(self.xCol,self.xLim[0]), check_seq=3)
-                                mList.append(data.getLastIndexWhereSmallerOrEq(self.xCol,self.xLim[1]))
-                            else:
-                                n=data.getFirstIndexWhereGreaterOrEq(self.limCol,self.xLim[0], check_seq=3)
-                                nList.append(n)
-                                if self.noSweepBackMeasured or self.skipSweepBack:
-                                    mList.append(data.getLastIndexWhereSmallerOrEq(self.limCol,self.xLim[1]))
-                                else:
-                                    mList.append(-len(data.getData())//2)
-                            validData=True
-                        except IndexError as ie:
-                            
-                            l=len(data.getData()[:,0])
-                            warnings.warn("Invalid Limits at column "+str(ie)[-1:]+" with value "+str(ie)[45:52])
-                try:
-                    if validData:
-                        n=max(nList)
-                        m=min(mList)
-                    else:
-                        n=l
-                        m=-1
-                    for data in deviceData:
-                        if m==-1:
-                            data.setData(data.getData()[n:])
-                        else:
-                            data.setData(data.getData()[n:m+1])
-                            
-                            
-                except ValueError:
-                    pass
+            self.processData_sub(self.dataList, self.spectralDataList, self.pixelsize_mm2)
                 
         self.dataProcessed=True
         return self.dataList
 
     def processAllAndExport(self, **kwargs):
         localDataList=self.importData()
-        for deviceData,spectralData in zip(localDataList,self.spectralDataList):
-            nList=[]
-            mList=[]
-            for data in deviceData:
-                data.limitData(xLim=self.xLimOrig, xCol=self.xColOrig)
-                data.processData(self.remDarkCurr, yCol=3)
-                data.processData(OLEDPlot.absolute, yCol=2)
-                data.processData(OLEDPlot.removeZeros, yCol=2)
-                if self.averageSweepBack and not self.noSweepBackMeasured:
-                    array=data.getData()
-                    array1=array[:int(len(array))//2]
-                    array2=array[int(len(array))//2:]
-                    array2=array2[::-1]
-                    array=[[a,b] for a,b in zip(array1,array2)]
-                    result=np.average(array, axis=1)
-                    data.setData(result)
-                subDataList=[]
-                #print(data.getData())
-                volt=data.getSplitData2D(xCol=1, yCol=2)[0]
-                subDataList.append(volt)
-                subDataList.append(data.getSplitData2D(xCol=1, yCol=2)[1]) #Current [2]  
-                dens=Data.processDataAndReturnArray(data, self.curToDensity)[:,1]
-                subDataList.append(dens) #Current_density [3]
-                lum=Data.processDataAndReturnArray(data, self.photToCandela, yCol=3)[:,2]
-                subDataList.append(lum) #Luminance [4]
-                rad=self.candToRadiance(lum,spectralData)
-                subDataList.append(rad) #Radiance [5]
-                curEffic=OLEDPlot.calcCurEffic(dens,lum)
-                subDataList.append(curEffic) #Current_efficacy
-                lumEffic=OLEDPlot.calcLumEffic(subDataList[0],dens,lum)
-                subDataList.append(lumEffic) #Luminous_efficacy
-                eqe=self.calcEQE(dens,rad,spectralData)
-                subDataList.append(eqe) #EQE8
-                power=self.doubleLogSlope(np.abs(volt-self.V_bi),np.abs(dens))
-                subDataList.append(power) #power9
-                data.setData(Data.mergeData(subDataList))
-                if self.xLim is not None:
-                    try:
-                        if self.limCol is None:
-                            nList.append(data.getFirstIndexWhereGreaterOrEq(self.xCol,self.xLim[0]))
-                            mList.append(data.getLastIndexWhereSmallerOrEq(self.xCol,self.xLim[1]))
-                        else:
-                            nList.append(data.getFirstIndexWhereGreaterOrEq(self.limCol,self.xLim[0]))
-                            mList.append(data.getLastIndexWhereSmallerOrEq(self.limCol,self.xLim[1]))
-                    except IndexError as ie:#
-                        warnings.warn("Invalid Limits at column "+str(ie)[-1:]+" with value "+str(ie)[45:52])
-            try:
-                n=max(nList)
-                m=min(mList)
-                for data in deviceData:
-                    if m==-1:
-                        data.setData(data.getData()[n:])
-                    else:
-                        data.setData(data.getData()[n:m+1])
-            except ValueError:
-                    pass
+        self.processData_sub(localDataList,self.spectralDataList,self.pixelsize_mm2)
         expectData, errData =self.calcCustomAverage(localDataList)
         self.exportAllData(expectData=expectData, errData=errData, **kwargs)
         return expectData, errData
