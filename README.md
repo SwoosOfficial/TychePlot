@@ -33,6 +33,7 @@ A collection of data handling scripts for plotting scienctific graphs. Based on 
 * Plot
 * PlotQV
 * OLEDPlot
+* OLEDCalc
 * OLEDSimPlot
 * SpectraPlot
 * ReflectoPlot
