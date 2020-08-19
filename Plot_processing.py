@@ -84,7 +84,7 @@ def calc_single_plot(plot, queue=None, index=0):
     else:
         return plot_result
 
-def calc(desiredPlots, init_plot_args, multithreaded=True, exportonly=False):
+def calc(desiredPlots, init_plot_args, multithreaded=True, exportonly=False, **kwargs):
     #init_plot_args=[name, fileList, inputParameters, cls, optionalParameters]
     if multithreaded:
         building_processes=[]
@@ -102,9 +102,9 @@ def calc(desiredPlots, init_plot_args, multithreaded=True, exportonly=False):
         for i in range(0,index):
             plot_draft_tup=plots_queue.get(True,TIMEOUT_PLOT)
             if not exportonly:
-                p = Process(target=calc_single_plot(plot_draft_tup[1], results_queue, plot_draft_tup[0]))
+                p = Process(target=calc_single_plot, args=(plot_draft_tup[1], results_queue, plot_draft_tup[0]))
             else:
-                p = Process(target=export_single_plot(plot_draft_tup[1], results_queue, plot_draft_tup[0]))
+                p = Process(target=export_single_plot, args=(plot_draft_tup[1], results_queue, plot_draft_tup[0]), kwargs=kwargs)
             p.start()
             plotting_processes.append(p)
         for p in building_processes:
