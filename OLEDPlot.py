@@ -473,7 +473,7 @@ class OLEDPlot(Plot):
                         nList.append(data.getFirstIndexWhereGreaterOrEq(self.xCol,self.xLim[0]), check_seq=3)
                         mList.append(data.getLastIndexWhereSmallerOrEq(self.xCol,self.xLim[1]))
                     else:
-                        n=data.getFirstIndexWhereGreaterOrEq(self.limCol,self.xLim[0], check_seq=3)
+                        n=data.getFirstIndexWhereGreaterOrEq(self.limCol,self.xLim[0], check_seq=5)
                         nList.append(n)
                         if self.noSweepBackMeasured or self.skipSweepBack:
                             mList.append(data.getLastIndexWhereSmallerOrEq(self.limCol,self.xLim[1]))
