@@ -302,7 +302,7 @@ class OLEDPlot(Plot):
                 yCol=self.specYCol
             try:
                 spectralData=Data(fileToNpArray(spectraFile, **self.spectralDataFormat)[0])
-            except TypeError:
+            except (TypeError, FileNotFoundError):
                 spectralData=diodeFuncData
             xData=spectralData.getSplitData2D()[0]
             yData=spectralData.getSplitData2D(yCol=yCol)[1]
