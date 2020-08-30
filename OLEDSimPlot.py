@@ -90,7 +90,7 @@ class OLEDSimPlot(Plot):
 
 class Material:
     iD=0
-    def __init__(self, thickness, CBLike, name="Unknown Material", x=0, y=0, vacY=0, dim=10**-10, metallic=False, height=0, outsourceDesc=None, desc_x_offset=0):
+    def __init__(self, thickness, CBLike, name="Unknown Material", x=0, y=0, vacY=0, dim=10**-10, metallic=False, height=0, outsourceDesc=None, desc_x_offset=0, startID=None):
         self.name=name
         self.thickness = thickness
         self.CBLike = CBLike
@@ -102,8 +102,12 @@ class Material:
         self.height=height
         self.outsourceDesc=outsourceDesc
         self.desc_x_offset=desc_x_offset
-        self.id = Material.iD+1
-        Material.iD=Material.iD+1
+        if startID is None:
+            self.id = Material.iD+1
+            Material.iD=Material.iD+1
+        else:
+            self.id = startID
+            Material.iD=startID
     def __repr__(self):
         return "{}: ({:3.0f} nm)".format(self.name,self.thickness*10**9)
     def __str__(self):

@@ -1050,10 +1050,10 @@ class Plot():
             
             try:
                 if self.showColAxType[self.showCol] == "log":
-                    ax.set_yscale("log", nonposy="clip")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
+                    ax.set_yscale("log", nonpositive="clip")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
             except TypeError:
                 if self.showColAxType[self.showCol[0]] == "log":
-                    ax.set_yscale("log", nonposy="clip")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
+                    ax.set_yscale("log", nonpositive="clip")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
             if self.axYLim is not None:
                 ax.set_ylim(*self.axYLim)
             if self.axXLim is not None:

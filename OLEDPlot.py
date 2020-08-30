@@ -470,10 +470,10 @@ class OLEDPlot(Plot):
             if self.xLim is not None:
                 try:
                     if self.limCol is None:
-                        nList.append(data.getFirstIndexWhereGreaterOrEq(self.xCol,self.xLim[0]), check_seq=3)
+                        nList.append(data.getFirstIndexWhereGreaterOrEq(self.xCol,self.xLim[0]), check_seq=5)
                         mList.append(data.getLastIndexWhereSmallerOrEq(self.xCol,self.xLim[1]))
                     else:
-                        n=data.getFirstIndexWhereGreaterOrEq(self.limCol,self.xLim[0], check_seq=3)
+                        n=data.getFirstIndexWhereGreaterOrEq(self.limCol,self.xLim[0], check_seq=5)
                         nList.append(n)
                         if self.noSweepBackMeasured or self.skipSweepBack:
                             mList.append(data.getLastIndexWhereSmallerOrEq(self.limCol,self.xLim[1]))
@@ -561,6 +561,7 @@ class OLEDPlot(Plot):
                 data=Data(Data.mergeData((expVolt,idCur,expPhot)))
             #data.processData(OLEDPlot.remDarkCurr, yCol=3)
             data.limitData(xLim=self.xLimOrig, xCol=self.xColOrig)
+            data.limitData(xLim=self.V_bi, xCol=0)
             data.processData(OLEDPlot.absolute, yCol=2)
             subDataList=[]
             volt=data.getSplitData2D(xCol=1,yCol=2)[0]

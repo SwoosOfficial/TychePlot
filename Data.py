@@ -101,28 +101,59 @@ class Data:
         self.setData(data)
 
     
-    def limitData(self, xLim=None, yLim=None, xCol=None, yCol=None, keepLimits=True):
+    def limitData(self, xLim=None, yLim=None, xCol=None, yCol=None, keepLimits=True, check_seq=5, legacy=False):
         data = self.getData()
         if xCol is None:
-                xCol=self.xCol
+            xCol=self.xCol
         if yCol is None:
-                yCol=self.yCol
-        if keepLimits:
-            if isinstance(xLim, list) or isinstance(xLim, tuple):
-                if len(xLim) == 2:
-                    data=data[(data[:,xCol-1]>=xLim[0]) & (data[:,xCol-1]<=xLim[1])]
-            if isinstance(yLim, list) or isinstance(yLim, tuple):
-                if len(yLim) == 2:
-                    data=data[(data[:,yCol-1]>=yLim[0]) & (data[:,yCol-1]<=yLim[1])]
+            yCol=self.yCol
+        if legacy:
+            if keepLimits:
+                if isinstance(xLim, list) or isinstance(xLim, tuple):
+                    if len(xLim) == 2:
+                        data=data[(data[:,xCol-1]>=xLim[0]) & (data[:,xCol-1]<=xLim[1])]
+                if isinstance(yLim, list) or isinstance(yLim, tuple):
+                    if len(yLim) == 2:
+                        data=data[(data[:,yCol-1]>=yLim[0]) & (data[:,yCol-1]<=yLim[1])]
+            else:
+                if isinstance(xLim, list) or isinstance(xLim, tuple):
+                    if len(xLim) == 2:
+                        data=data[(data[:,xCol-1]>xLim[0]) & (data[:,xCol-1]<xLim[1])]
+                if isinstance(yLim, list) or isinstance(yLim, tuple):
+                    if len(yLim) == 2:
+                        data=data[(data[:,yCol-1]>yLim[0]) & (data[:,yCol-1]<yLim[1])]
+            if list(data) == []:
+                raise IndexError("Empty data, invalid limits")
         else:
-            if isinstance(xLim, list) or isinstance(xLim, tuple):
-                if len(xLim) == 2:
-                    data=data[(data[:,xCol-1]>xLim[0]) & (data[:,xCol-1]<xLim[1])]
-            if isinstance(yLim, list) or isinstance(yLim, tuple):
-                if len(yLim) == 2:
-                    data=data[(data[:,yCol-1]>yLim[0]) & (data[:,yCol-1]<yLim[1])]
-        if list(data) == []:
-            raise IndexError("Empty data, invalid limits")
+            if keepLimits:
+                if isinstance(xLim, list) or isinstance(xLim, tuple):
+                    if len(xLim) == 2:
+                        start=self.getFirstIndexWhereGreaterOrEq(xCol, xLim[0], check_seq=check_seq)
+                        end=self.getFirstIndexWhereGreaterOrEq(xCol, xLim[1], check_seq=check_seq)
+                        try:
+                            data=data[start:end+1]
+                        except IndexError:
+                            data=data[start:end]
+                if isinstance(yLim, list) or isinstance(yLim, tuple):
+                    if len(yLim) == 2:
+                        start=self.getFirstIndexWhereGreaterOrEq(yCol, yLim[0], check_seq=check_seq)
+                        end=self.getFirstIndexWhereGreaterOrEq(yCol, yLim[1], check_seq=check_seq)
+                        try:
+                            data=data[start:end+1]
+                        except IndexError:
+                            data=data[start:end]
+            else:
+                if isinstance(xLim, list) or isinstance(xLim, tuple):
+                    if len(xLim) == 2:
+                        start=self.getFirstIndexWhereGreaterOrEq(xCol, xLim[0], check_seq=check_seq)
+                        end=self.getFirstIndexWhereGreaterOrEq(xCol, xLim[1], check_seq=check_seq)
+                        data=data[start:end]   
+                if isinstance(yLim, list) or isinstance(yLim, tuple):
+                    if len(yLim) == 2:
+                        start=self.getFirstIndexWhereGreaterOrEq(yCol, yLim[0], check_seq=check_seq)
+                        end=self.getFirstIndexWhereGreaterOrEq(yCol, yLim[1], check_seq=check_seq)
+                        data=data[start:end]
+                
         self.setData(data)
         
     def intersectData(self, intervals, column=None, keepLimits=True, invert_intervals=False):
@@ -194,34 +225,46 @@ class Data:
                 #print("Index {}: Value {} bigger than {}".format(n,colVec[n],value))
                 prev=True
                 for i in range(1,check_seq):
-                    prev= prev and colVec[n+i]>=value-tolerance
+                    try:
+                        prev= prev and colVec[n+i]>=value-tolerance
+                    except IndexError:
+                        pass
                     #if prev:
                         #print("And Index {}: Value {} bigger than {}".format(n+i,colVec[n+i],value))
                 if prev:
                     return n
         raise IndexError("No Index found where a value is greater than {:7.1E}, invalid limits at column:".format(value)+repr(column))
     
-    def getLastIndexWhereSmallerOrEq(self,column,value,tolerance=0, offset=1):
+    def getLastIndexWhereSmallerOrEq(self,column,value,tolerance=0, offset=1, check_seq=1):
         data=self.getData()
         colVec=data[:,column-1]
         for n in range(offset,len(colVec)):
-            if colVec[-n]<=value-tolerance:
+            prev=True
+            for i in range(1,check_seq):
+                prev= prev and colVec[-n]<=value-tolerance
+            if prev:
                 return -n
         raise IndexError("No Index found where a value is smaller than {:7.1E}, invalid limits at column:".format(value)+repr(column))
     
-    def getLastIndexWhereGreaterOrEq(self,column,value,tolerance=0):
+    def getLastIndexWhereGreaterOrEq(self,column,value,tolerance=0, check_seq=1):
         data=self.getData()
         colVec=data[:,column-1]
         for n in range(1,len(colVec)):
-            if colVec[-n]>=value-tolerance:
+            prev=True
+            for i in range(1,check_seq):
+                prev= prev and colVec[-n]>=value-tolerance
+            if prev:
                 return -n
         raise IndexError("No Index found where a value is greater than {:7.1E}, invalid limits at column:".format(value)+repr(column))
     
-    def getFirstIndexWhereSmallerOrEq(self,column,value,tolerance=0, offset=0):
+    def getFirstIndexWhereSmallerOrEq(self,column,value,tolerance=0, offset=0, check_seq=1):
         data=self.getData()
         colVec=data[:,column-1]
         for n in range(offset,len(colVec)):
-            if colVec[n]<=value-tolerance:
+            prev=True
+            for i in range(1,check_seq):
+                 prev = prev and colVec[n]<=value-tolerance
+            if prev:
                 return n
         raise IndexError("No Index found where a value is greater than {:7.1E}, invalid limits at column:".format(value)+repr(column))
     
