@@ -302,10 +302,18 @@ class OLEDPlot(Plot):
                 yCol=self.specYCol
             try:
                 spectralData=Data(fileToNpArray(spectraFile, **self.spectralDataFormat)[0])
-            except (TypeError, FileNotFoundError):
+                xData=spectralData.getSplitData2D()[0]
+                yData=spectralData.getSplitData2D(yCol=yCol)[1]
+            except FileNotFoundError:
+                warnings.warn(f"SpectraFile {spectraFile} Not Found, Radiance and EQE will be wrong!")
                 spectralData=diodeFuncData
-            xData=spectralData.getSplitData2D()[0]
-            yData=spectralData.getSplitData2D(yCol=yCol)[1]
+                xData=spectralData.getSplitData2D()[0]
+                yData=spectralData.getSplitData2D()[1]
+            except TypeError:
+                warnings.warn("SpectraFile invalid, Radiance and EQE will be wrong!")
+                spectralData=diodeFuncData
+                xData=spectralData.getSplitData2D()[0]
+                yData=spectralData.getSplitData2D()[1]
             try:
                 if self.spec_bg_file is None:
                     bgData=spectralData.getSplitData2D(yCol=bg)[1]
