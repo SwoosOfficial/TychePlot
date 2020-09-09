@@ -478,10 +478,10 @@ class OLEDPlot(Plot):
             if self.xLim is not None:
                 try:
                     if self.limCol is None:
-                        nList.append(data.getFirstIndexWhereGreaterOrEq(self.xCol,self.xLim[0]), check_seq=5)
+                        nList.append(data.getFirstIndexWhereGreaterOrEq(self.xCol,self.xLim[0]), check_seq=10)
                         mList.append(data.getLastIndexWhereSmallerOrEq(self.xCol,self.xLim[1]))
                     else:
-                        n=data.getFirstIndexWhereGreaterOrEq(self.limCol,self.xLim[0], check_seq=5)
+                        n=data.getFirstIndexWhereGreaterOrEq(self.limCol,self.xLim[0], check_seq=10)
                         nList.append(n)
                         if self.noSweepBackMeasured or self.skipSweepBack:
                             mList.append(data.getLastIndexWhereSmallerOrEq(self.limCol,self.xLim[1]))
@@ -490,7 +490,7 @@ class OLEDPlot(Plot):
                     validData=True
                 except IndexError as ie:
                     l=len(data.getData()[:,0])
-                    warnings.warn("Invalid Limits at column "+str(ie)[-1:]+" with value "+str(ie)[45:52])
+                    warnings.warn("Invalid Limits at column "+str(ie)[55]+" with value "+str(ie)[45:52])
         try:
             if validData:
                 n=max(nList)
