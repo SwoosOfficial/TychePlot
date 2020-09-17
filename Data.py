@@ -6,7 +6,7 @@
 import numpy as np
 import Filereader
 import copy
-
+import warnings
 
 # In[2]:
 
@@ -128,16 +128,32 @@ class Data:
             if keepLimits:
                 if isinstance(xLim, list) or isinstance(xLim, tuple):
                     if len(xLim) == 2:
-                        start=self.getFirstIndexWhereGreaterOrEq(xCol, xLim[0], check_seq=check_seq)
-                        end=self.getFirstIndexWhereGreaterOrEq(xCol, xLim[1], check_seq=check_seq)
+                        try:
+                            start=self.getFirstIndexWhereGreaterOrEq(xCol, xLim[0], check_seq=check_seq)
+                        except IndexError:
+                            start=0
+                            warnings.warn("Invalid start limit")
+                        try:
+                            end=self.getFirstIndexWhereGreaterOrEq(xCol, xLim[1], check_seq=check_seq)
+                        except IndexError:
+                            end=len(data)
+                            warnings.warn("Invalid end limit")
                         try:
                             data=data[start:end+1]
                         except IndexError:
                             data=data[start:end]
                 if isinstance(yLim, list) or isinstance(yLim, tuple):
                     if len(yLim) == 2:
-                        start=self.getFirstIndexWhereGreaterOrEq(yCol, yLim[0], check_seq=check_seq)
-                        end=self.getFirstIndexWhereGreaterOrEq(yCol, yLim[1], check_seq=check_seq)
+                        try:
+                            start=self.getFirstIndexWhereGreaterOrEq(xCol, xLim[0], check_seq=check_seq)
+                        except IndexError:
+                            start=0
+                            warnings.warn("Invalid start limit")
+                        try:
+                            end=self.getFirstIndexWhereGreaterOrEq(xCol, xLim[1], check_seq=check_seq)
+                        except IndexError:
+                            end=len(data)
+                            warnings.warn("Invalid end limit")
                         try:
                             data=data[start:end+1]
                         except IndexError:
@@ -145,13 +161,29 @@ class Data:
             else:
                 if isinstance(xLim, list) or isinstance(xLim, tuple):
                     if len(xLim) == 2:
-                        start=self.getFirstIndexWhereGreaterOrEq(xCol, xLim[0], check_seq=check_seq)
-                        end=self.getFirstIndexWhereGreaterOrEq(xCol, xLim[1], check_seq=check_seq)
+                        try:
+                            start=self.getFirstIndexWhereGreaterOrEq(xCol, xLim[0], check_seq=check_seq)
+                        except IndexError:
+                            start=0
+                            warnings.warn("Invalid start limit")
+                        try:
+                            end=self.getFirstIndexWhereGreaterOrEq(xCol, xLim[1], check_seq=check_seq)
+                        except IndexError:
+                            end=len(data)
+                            warnings.warn("Invalid end limit")
                         data=data[start:end]   
                 if isinstance(yLim, list) or isinstance(yLim, tuple):
                     if len(yLim) == 2:
-                        start=self.getFirstIndexWhereGreaterOrEq(yCol, yLim[0], check_seq=check_seq)
-                        end=self.getFirstIndexWhereGreaterOrEq(yCol, yLim[1], check_seq=check_seq)
+                        try:
+                            start=self.getFirstIndexWhereGreaterOrEq(xCol, xLim[0], check_seq=check_seq)
+                        except IndexError:
+                            start=0
+                            warnings.warn("Invalid start limit")
+                        try:
+                            end=self.getFirstIndexWhereGreaterOrEq(xCol, xLim[1], check_seq=check_seq)
+                        except IndexError:
+                            end=len(data)
+                            warnings.warn("Invalid end limit")
                         data=data[start:end]
                 
         self.setData(data)
@@ -233,7 +265,7 @@ class Data:
                         #print("And Index {}: Value {} bigger than {}".format(n+i,colVec[n+i],value))
                 if prev:
                     return n
-        raise IndexError("No Index found where a value is greater than {:7.1E}, invalid limits at column:".format(value)+repr(column))
+        raise IndexError("No Index found where a value is greater than {:7.1E}, invalid limits at column:".format(value)+repr(column)+f"\nColumn is :\n{colVec}")
     
     def getLastIndexWhereSmallerOrEq(self,column,value,tolerance=0, offset=1, check_seq=1):
         data=self.getData()

@@ -33,6 +33,7 @@ class Plot():
     
     #constants
     fig_width_default_pt=424.75906
+    default_colors=['#1f77b4','#d62728','#9467bd','#8c564b','#e377c2','#7f7f7f','#ff7f0e','#bcbd22','#17becf','#f8e520','#2ca02c']
     
     
     @classmethod
@@ -213,7 +214,7 @@ class Plot():
                  showColAxType=[None,"lin","lin","lin"],
                  xAxisLim=None,
                  showColAxLim=[None,None,None,None],
-                 colors=['#1f77b4','#d62728','#9467bd','#8c564b','#e377c2','#7f7f7f','#ff7f0e','#bcbd22','#17becf','#f8e520','#2ca02c'],
+                 colors=default_colors,
                  linestyles=["-","--",":","-."],
                  markers=["o","^","s","p","P","*"],
                  iterLinestyles=False,
@@ -502,7 +503,8 @@ class Plot():
                 "pgf.texsystem": pgfSys,
                 "font.family": "sans-serif", # use serif/main font for text elements
                 "font.sans-serif": [self.font],
-                "mathtext.fallback_to_cm": False,
+                "mathtext.fallback": "cm",
+                "axes.unicode_minus": False,
                 "mathtext.fontset":"custom",
                 "mathtext.tt": self.font,
                 "mathtext.rm": self.font,
@@ -514,9 +516,9 @@ class Plot():
                 "xtick.labelsize": self.customFontsize[3],
                 "ytick.labelsize": self.customFontsize[4],
                 "text.usetex": True,    # use inline math for ticks
-                "pgf.rcfonts": True, 
+                "pgf.rcfonts": False, 
                 "pgf.preamble": r"\usepackage{amsmath}\usepackage{upgreek}\usepackage{lmodern}\usepackage{sfmath}",#"#\usepackage{lmodern}\usepackage{fontspec}\setmainfont{Latin Modern Sans}",
-                "text.latex.preamble": r"\usepackage{amsmath}\usepackage{upgreek}\usepackage{lmodern}\usepackage{sfmath}",#"\usepackage{lmodern}\usepackage{fontspec}\setmainfont{Latin Modern Sans}",
+                #"text.latex.preamble": r"\usepackage{amsmath}\usepackage{upgreek}\usepackage{lmodern}\usepackage{sfmath}\setmainfont{Latin Modern Sans}",#"\usepackage{lmodern}\usepackage{fontspec}\setmainfont{Latin Modern Sans}",
                 "lines.markersize": self.markerSize
             }
         if self.customFontsize is not None and len(self.customFontsize) == 5:
@@ -824,9 +826,9 @@ class Plot():
             logErrMin=[np.nan_to_num(np.minimum(err, mind), nan=0, posinf=0, neginf=0) for err,mind in zip(symErr,minErr)]
             logErrMax=[np.nan_to_num(np.minimum(err, maxi), nan=0, posinf=0, neginf=0) for err,maxi in zip(symErr,maxErr)]
             # if any error is as high that the bar would reach zero, set it to zero
-            logErrMin=np.asarray([np.asarray([np.asarray([errv if value>errv else 0.0 for errv,value in zip(errv_row,value_row)]) for errv_row,value_row in zip(err,expect.getData())]) for err,expect in zip(logErrMin, expectData)])
-            values=np.asarray([np.asarray([np.asarray([value for errv,value in zip(errv_row,value_row)]) for errv_row,value_row in zip(err,expect.getData())]) for err,expect in zip(logErrMin, expectData)])
-            errvs=np.asarray([np.asarray([np.asarray([errv for errv,value in zip(errv_row,value_row)]) for errv_row,value_row in zip(err,expect.getData())]) for err,expect in zip(logErrMin, expectData)])
+            logErrMin=np.asarray([np.asarray([np.asarray([errv if value>errv else 0.0 for errv,value in zip(errv_row,value_row)], dtype=object) for errv_row,value_row in zip(err,expect.getData())], dtype=object) for err,expect in zip(logErrMin, expectData)], dtype=object)
+            values=np.asarray([np.asarray([np.asarray([value for errv,value in zip(errv_row,value_row)], dtype=object) for errv_row,value_row in zip(err,expect.getData())], dtype=object) for err,expect in zip(logErrMin, expectData)], dtype=object)
+            errvs=np.asarray([np.asarray([np.asarray([errv for errv,value in zip(errv_row,value_row)], dtype=object) for errv_row,value_row in zip(err,expect.getData())], dtype=object) for err,expect in zip(logErrMin, expectData)], dtype=object)
         except ValueError:
             warnings.warn("Unsupported Input for Error estimation given")
             logErrMin=[np.zeros(expect.getData().shape) for expect in expectData]
