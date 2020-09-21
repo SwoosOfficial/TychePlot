@@ -33,7 +33,18 @@ class Plot():
     
     #constants
     fig_width_default_pt=424.75906
-    default_colors=['#1f77b4','#d62728','#9467bd','#8c564b','#e377c2','#7f7f7f','#ff7f0e','#bcbd22','#17becf','#f8e520','#2ca02c']
+    default_colors=[
+        (31/255, 119/255, 180/255, 1),
+        (214/255, 39/255, 40/255, 1),
+        (148/255, 103/255, 189/255, 1),
+        (140/255, 86/255, 75/255, 1),
+        (227/255, 119/255, 194/255, 1),
+        (127/255, 127/255, 127/255, 1),
+        (255/255, 127/255, 14/255, 1),
+        (188/255, 189/255, 34/255, 1),
+        (23/255, 190/255, 207/255, 1),
+        (248/255, 229/255, 32/255, 1),
+        (44/255, 160/255, 44/255, 1)]
     
     
     @classmethod
@@ -282,6 +293,7 @@ class Plot():
                  markerFillstyles=['full','none'],
                  subdir=None,
                  iterBoth=False,
+                 append_col_in_label=True,
                  #ax_aspect='auto',
                 ):
         #static inits
@@ -452,6 +464,7 @@ class Plot():
         self.markerSize=markerSize
         self.markerFillstyles=markerFillstyles
         self.iterBoth=iterBoth
+        self.append_col_in_label=append_col_in_label
         #self.ax_aspect=ax_aspect
         #inits
         #if mpl_use == "pgf":
@@ -516,6 +529,7 @@ class Plot():
                 "xtick.labelsize": self.customFontsize[3],
                 "ytick.labelsize": self.customFontsize[4],
                 "text.usetex": True,    # use inline math for ticks
+                "axes.formatter.use_mathtext": True,
                 "pgf.rcfonts": False, 
                 "pgf.preamble": r"\usepackage{amsmath}\usepackage{upgreek}\usepackage{lmodern}\usepackage{sfmath}",#"#\usepackage{lmodern}\usepackage{fontspec}\setmainfont{Latin Modern Sans}",
                 #"text.latex.preamble": r"\usepackage{amsmath}\usepackage{upgreek}\usepackage{lmodern}\usepackage{sfmath}\setmainfont{Latin Modern Sans}",#"\usepackage{lmodern}\usepackage{fontspec}\setmainfont{Latin Modern Sans}",
@@ -911,9 +925,15 @@ class Plot():
         fillstyles=fs
         ax2fillstyles=ax2fs
         try:
-            labelY=labels[n]+" "+self.showColLabel[self.showCol]
+            if self.append_col_in_label:
+                labelY=labels[n]+" "+self.showColLabel[self.showCol]
+            else:
+                labelY=labels[n]
         except TypeError:
-            labelY=[labels[n]+" "+self.showColLabel[singleShowCol] for singleShowCol in self.showCol]
+            if self.append_col_in_label:
+                labelY=[labels[n]+" "+self.showColLabel[singleShowCol] for singleShowCol in self.showCol]
+            else:
+                labelY=labels[n]
         if self.show[n][0]:
             if self.errors[n][0]:
                 try:
