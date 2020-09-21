@@ -8,6 +8,7 @@ import matplotlib as mpl
 #mpl.use("pgf")
 import matplotlib.pyplot
 import numpy as np
+import scipy as sci
 import scipy.interpolate as inter
 import copy
 import sys
@@ -15,6 +16,7 @@ import os
 import string
 import warnings
 import functools
+from functools import wraps
 import copy
 import inspect
 from matplotlib import rc
@@ -22,6 +24,7 @@ from Filereader import fileToNpArray
 from Data import Data
 from Fitter import Fitter
 from Plot import Plot
+import matplotlib.ticker as mtick
 
 
 # In[2]:
@@ -56,6 +59,17 @@ class SpectraPlot(Plot):
     def noNegatives(cls,a):
         return np.maximum(a,np.zeros(len(a), dtype=np.float64))
     
+    @classmethod
+    def lum_interpolator(cls, lumFunc, fill_value="extrapolate", kind="cubic"):
+        """
+        Prepare an interpolator, that extrapolates or returns zero if the extrapolation is smaller than 0
+        """
+        interpolator=sci.interpolate.interp1d(*lumFunc, kind=kind, fill_value=fill_value, bounds_error=False)
+        @wraps(interpolator)
+        def wrapper(*args,**kwargs):
+            return np.maximum(abs(interpolator(*args,**kwargs)*0),interpolator(*args,**kwargs))
+        return wrapper
+
     @classmethod
     def normalize(cls, a, value=None, col=None):
         b=a-np.amin(a)
@@ -138,6 +152,7 @@ class SpectraPlot(Plot):
                  validYTable=None,
                  normalizeMode="single",
                  showFWHM=False,
+                 ticklabelformat="plain",
                  **kwargs
                 ):
         if rainbowMode:
@@ -158,6 +173,7 @@ class SpectraPlot(Plot):
         self.showFWHM=showFWHM
         self.FWHMParamPos=FWHMParamPos
         self.postprocess_normalization=False
+        self.ticklabelformat=ticklabelformat
         #self.dataList=self.importData()
    
     def processFileName(self, option=".pdf"):
@@ -378,7 +394,7 @@ class SpectraPlot(Plot):
         self.ax.add_patch(polygon)
     
     
-    def rainbow_fill(self,expectData, cmap=matplotlib.pyplot.get_cmap("nipy_spectral")):
+    def rainbow_fill(self, expectData, cmap=matplotlib.pyplot.get_cmap("nipy_spectral")):
         X,Y = expectData[0].getSplitData2D()
         dx = X[1]-X[0]
         S  = 380 
@@ -387,7 +403,7 @@ class SpectraPlot(Plot):
             h = 0.01
             p = -0.035
         else:
-            maxi=np.amax(np.asarray([np.amax(expect.getSplitData2D()) for expect in expectData]))
+            maxi=np.amax(np.asarray([np.amax(expect.getSplitData2D(yCol=self.showCol)[1]) for expect in expectData]))
             h = 0.01*maxi
             p = -0.035*maxi
         if not self.rainbowMode:
@@ -429,6 +445,11 @@ class SpectraPlot(Plot):
     
     def afterPlot(self):
         ax=self.ax
+        form=mtick.ScalarFormatter(useMathText=True)
+        #form.set_scientific(True)
+        form.set_powerlimits((-1, 1)) 
+        ax.yaxis.set_major_formatter(form)
+        ax.yaxis.get_offset_text().set_visible(False)
         if self.xCol==1:
             self.rainbow_fill(self.expectData)
             if self.rainbowMode:
