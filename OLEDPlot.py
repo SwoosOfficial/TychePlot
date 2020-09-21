@@ -109,19 +109,19 @@ class OLEDPlot(Plot):
         if files is None:
             if update_by_existing:
                 files = os.listdir(subdir)
-                keys = list(set([file.split(fill)[0]+file.split(fill)[1] for file in files]))
-                keys = [key for key in keys if key.startswith(prefix)]
+                keys = list(set([(file.split(fill)[0],file.split(fill)[1]) for file in files]))
+                keys = [key for key in keys if key[0] == prefix]
                 fileZ=[]
                 for key in keys:
                     subfiles=[]
                     for file in files:
                         dated_measurement=False
                         try:
-                            if file.split(fill)[2]+file.split(fill)[3] == key:
+                            if (file.split(fill)[2],file.split(fill)[3]) == key:
                                 dated_measurement=True
                         except IndexError:
                             dated_measurement=False
-                        if file.split(fill)[0]+file.split(fill)[1] == key or dated_measurement:
+                        if (file.split(fill)[0],file.split(fill)[1]) == key or dated_measurement:
                             subfiles.append(subdir+file[:-len(fileFormat["fileEnding"])])
                     subfiles.sort()
                     fileZ.append(subfiles)
@@ -216,7 +216,7 @@ class OLEDPlot(Plot):
                   "Current (A)",
                   "Current Density ($\\tfrac{\\mathsf{mA}}{\\mathsf{cm}^\\mathsf{2}}$)",
                   "Luminance ($\\tfrac{\\mathsf{cd}}{\\mathsf{m}^\\mathsf{2}}$)",
-                  "Radiance ($\\tfrac{\\mathsf{W}{\\mathsf{sr}\\cdot\\mathsf{m}^\\mathsf{2}}$)",
+                  "Radiance ($\\tfrac{\\mathsf{W}}{\\mathsf{sr}\\cdot{}\\mathsf{m}^\\mathsf{2}}$)",
                   "Current Efficiency ($\\tfrac{\\mathsf{cd}}{\\mathsf{A}}$)",
                   "Luminous Efficacy ($\\tfrac{\\mathsf{lm}}{\\mathsf{W}}$)",
                   "EQE (\\%)",
