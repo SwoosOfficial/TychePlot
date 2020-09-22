@@ -38,6 +38,8 @@ class OLEDPlot(Plot):
     fileFormat={"separator":"\t", "skiplines":1}
     #ProgKonst
     chars=list(string.ascii_uppercase) #alphabetUppercase
+    luminosity_file=os.path.dirname(os.path.abspath(inspect.getsourcefile(Data)))+"/luminFunction.csv"
+    luminosity_fileDataFormat={"separator":",", "skiplines":0, "lastlines":50} #custom csv format
     
     Voltage=1
     Current=2
@@ -239,6 +241,7 @@ class OLEDPlot(Plot):
                  spec_bg_file=None,
                  sweepOverride=None,
                  invertedDevice=False,
+                 noVLFilter=False,
                  **kwargs
                 ):
         self.sweepOverride=sweepOverride
@@ -279,6 +282,7 @@ class OLEDPlot(Plot):
         self.curIdeal=curIdeal
         self.lumThresh=lumThresh
         self.invertedDevice=invertedDevice
+        self.noVLFilter=noVLFilter
         #initmethods
         self.exportDataList=copy.deepcopy(self.dataList)
         self.spectralDataList=self.spectraDataImport()[0]
@@ -289,7 +293,10 @@ class OLEDPlot(Plot):
                       
     def spectraDataImport(self):
         bg=self.specBg
-
+        if self.noVLFilter:
+            self.luminosityFuncData=Data(fileToNpArray(self.luminosity_file, **self.luminosity_fileDataFormat)[0])
+            self.luminosityFuncData.processData(Plot.normalize2, yCol=2)
+            Plot.equalizeRanges(self.luminosityFuncData)
         diodeFuncData=Data(fileToNpArray(self.photodiodeFunctionFile, **self.diodeDataFormat)[0])
         diodeFuncData.processData(Plot.normalize2, yCol=self.diodYCol)
         spectralDataList=[]
@@ -362,6 +369,33 @@ class OLEDPlot(Plot):
             return phot*4.3*self.pixelsize_mm2**(-1)*10**10 #converts A to cd/m² Correction: pixelsize_mm2
         return phot*4.3*pixelsize**(-1)*10**10 #converts A to cd/m² Correction: pixelsize_mm2
     
+    def photToRad(self,phot, spectralData, pixelsize=None):
+        """According to:
+            
+            With PHI_e = Radiant Flux
+            
+            I_p=int_0_inf Psi(lambda) dPHI/dlambda dlambda
+            I_p=PHI_e* int_0_inf Psi(lambda) dPHI~/dlambda dlambda
+            let:
+            s=int_0_inf Psi(lambda) dPHI~/dlambda dlambda
+            with:
+            1 = int_0_inf dPHI~/dlambda dlambda
+            Analogously to photToCandela:
+            L_e=rad=c*I_p
+            c=r**2/(s*A_pixel*A_Photodiode)
+            with:
+            r=45*10**-3
+            A_pixel=10**-6
+            A_Photodiode=10**-4
+        
+        """
+        if not self.noVLFilter:
+            raise NotYetImplementedError
+        summe=np.sum([self.diodeData.getSplitData2D()[1][a]*spectralData.getSplitData2D()[1][a] for a in range(0,len(self.diodeData.getSplitData2D()[1]))])
+        if pixelsize is None:
+            return phot*45**2*(self.pixelsize_mm2*summe)**(-1)*10**4 #converts A to cd/m² Correction: pixelsize_mm2
+        return phot*45**2*(pixelsize*summe)**(-1)*10**4 #converts A to cd/m² Correction: pixelsize_mm2
+    
     def candToPhotoCurr(self, cand, pixelsize=None):
         if pixelsize is None:
             return cand/(4.3*self.pixelsize_mm2**(-1)*10**10)
@@ -370,6 +404,12 @@ class OLEDPlot(Plot):
     def candToRadiance(self,cand, spectralData): #converts cd/m² to W/(sr*m²)
         summe=np.sum([self.diodeData.getSplitData2D()[1][a]*spectralData.getSplitData2D()[1][a] for a in range(0,len(self.diodeData.getSplitData2D()[1]))])
         return cand/(OLEDPlot.K_m*summe)
+    
+    def radToCandela(self, rad, spectralData):
+        if not self.noVLFilter:
+            raise NotYetImplementedError
+        summe=np.sum([self.luminosityFuncData.getSplitData2D()[1][a]*spectralData.getSplitData2D()[1][a] for a in range(0,len(self.luminosityFuncData.getSplitData2D()[1]))])
+        return OLEDPlot.K_m*summe*rad
     
     def calcEQE(self, dens, rad, spectralData):
         sum2=np.sum([spectralData.getSplitData2D()[1][a]/spectralData.getSplitData2D()[0][a] for a in range(0,len(spectralData.getSplitData2D()[1]))])
@@ -447,6 +487,7 @@ class OLEDPlot(Plot):
             data.processData(self.remDarkCurr, yCol=3)
             data.processData(OLEDPlot.absolute, yCol=2)
             data.processData(OLEDPlot.removeZeros, yCol=2)
+            
             if self.averageSweepBack and not self.noSweepBackMeasured:
                 array=data.getData()
                 array1=array[:int(len(array))//2]
@@ -462,9 +503,13 @@ class OLEDPlot(Plot):
             subDataList.append(current) #Current [2]  
             dens=Data.processDataAndReturnArray(data, self.curToDensity, pixelsize=pixelsize)[:,1]
             subDataList.append(dens) #Current_density [3]
-            lum=Data.processDataAndReturnArray(data, self.photToCandela, yCol=3, pixelsize=pixelsize)[:,2]
+            if not self.noVLFilter:
+                lum=Data.processDataAndReturnArray(data, self.photToCandela, yCol=3, pixelsize=pixelsize)[:,2]
+                rad=self.candToRadiance(lum,spectralData)
+            else:
+                rad=Data.processDataAndReturnArray(data, self.photToRad, spectralData=spectralData, yCol=3, pixelsize=pixelsize)[:,2]
+                lum=self.radToCandela(rad,spectralData)
             subDataList.append(lum) #Luminance [4]
-            rad=self.candToRadiance(lum,spectralData)
             subDataList.append(rad) #Radiance [5]
             curEffic=OLEDPlot.calcCurEffic(dens,lum)
             subDataList.append(curEffic) #Current_efficacy
