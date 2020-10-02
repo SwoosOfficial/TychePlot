@@ -580,13 +580,15 @@ class OLEDPlot(Plot):
         
     def importData(self):
         if not self.dataImported:
+            upper_crop=0
             if self.skipSweepBack and not self.averageSweepBack and not self.noSweepBackMeasured:
                 if self.sweepOverride is not None:
                     self.dataList=[[Data(fileToNpArray(pixel, **self.fileFormat)[0][:int(len(fileToNpArray(pixel, **self.fileFormat)[0])//2)], xCol=self.xCol, yCol=self.showCol) if not swOvR else Data(fileToNpArray(pixel, **self.fileFormat)[0], xCol=self.xCol, yCol=self.showCol) for pixel,swOvR in zip(device,swOv)] for device,swOv in zip(self.fileList,self.sweepOverride)]
                 else:
                     self.dataList=[[Data(fileToNpArray(pixel, **self.fileFormat)[0][:int(len(fileToNpArray(pixel, **self.fileFormat)[0])//2)], xCol=self.xCol, yCol=self.showCol) for pixel in device] for device in self.fileList]
             else:
-                self.dataList=[[Data(fileToNpArray(pixel, **self.fileFormat)[0], xCol=self.xCol, yCol=self.showCol) for pixel in device] for device in self.fileList]
+                self.dataList=super(OLEDPlot, self).importData()
+            
             #for dataSubList in self.dataList:
             #    for data in dataSubList:
             #        data.removeDoubles(xCol=self.xColOrig)

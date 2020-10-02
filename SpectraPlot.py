@@ -437,9 +437,9 @@ class SpectraPlot(Plot):
         else:
             return ticks
         
-    def importData(self):
-        self.dataList=[[Data(fileToNpArray(pixel, **self.fileFormat)[0], desc=fileToNpArray(pixel, **self.fileFormat)[1]) for pixel in device] for device in self.fileList]
-        return self.dataList
+    #def importData(self):
+    #    self.dataList=[[Data(fileToNpArray(pixel, **self.fileFormat)[0], desc=fileToNpArray(pixel, **self.fileFormat)[1]) for pixel in device] for device in self.fileList]
+    #    return self.dataList
     
     
     

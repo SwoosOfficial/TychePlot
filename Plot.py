@@ -720,10 +720,28 @@ class Plot():
             string=self.filenamePrefix+self.fill+string
         return string+option
         
+    def makeDataFromFile(self, measurement, fileFormat, lower_crop=0, upper_crop=0):
+        if upper_crop==0:
+            return Data(
+                        fileToNpArray(measurement, **fileFormat)[0][lower_crop:], 
+                        desc=fileToNpArray(measurement, 
+                                           **fileFormat)[1], 
+                        xCol=self.xCol, 
+                        yCol=self.showCol)
+        return Data(
+                    fileToNpArray(measurement, **fileFormat)[0][lower_crop:upper_crop], 
+                    desc=fileToNpArray(measurement, 
+                                       **fileFormat)[1], 
+                    xCol=self.xCol, 
+                    yCol=self.showCol)
         
-    def importData(self):
+    def importData(self, **kwargs):
         if not self.dataImported:
-            self.dataList=[[Data(fileToNpArray(measurement, **self.fileFormat)[0], desc=fileToNpArray(measurement, **self.fileFormat)[1], xCol=self.xCol, yCol=self.showCol) for measurement in sample] for sample in self.fileList]
+            try:
+                self.fileFormat[0]
+                self.dataList=[[self.makeDataFromFile(measurement, fileFormat, **kwargs) for measurement in sample] for sample,fileFormat in zip(self.fileList,self.fileFormat)]
+            except KeyError:
+                self.dataList=[[self.makeDataFromFile(measurement, self.fileFormat, **kwargs) for measurement in sample] for sample in self.fileList]
         return self.dataList
     
     def processData(self):
