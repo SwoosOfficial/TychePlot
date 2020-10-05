@@ -52,7 +52,7 @@ class OLEDPlot(Plot):
     
     #defaults
     jvl_file_format_default={"separator":"\t", "skiplines":1, "fileEnding":".uil"}
-    spectral_data_format_default={"separator":";", "skiplines":82, "fileEnding":".csv"}
+    spectral_data_format_default={"separator":";", "skiplines":75, "fileEnding":".csv"}
     pixels_default_qty=4
     
     @classmethod
