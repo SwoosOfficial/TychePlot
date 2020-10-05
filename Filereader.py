@@ -8,7 +8,19 @@ import numpy as np
 
 # In[5]:
 
-def fileToNpArray(filename, separator=",", skiplines=1, backoffset=0, lastlines=0, exceptColumns=[], commaToPoint=False, lastlineNoNewLine=False, fileEnding=None, transpose=False, ignoreRowCol=None, debug=False):
+def fileToNpArray(filename, 
+                  separator=",", 
+                  skiplines=1, 
+                  backoffset=0, 
+                  lastlines=0, 
+                  exceptColumns=[], 
+                  commaToPoint=False, 
+                  lastlineNoNewLine=False, 
+                  fileEnding=None, 
+                  transpose=False, 
+                  ignoreRowCol=None,
+                  unitConversionFactors=[1,1],
+                  debug=False):
     if fileEnding is None:
         file = open(filename,"r")
     else:
@@ -51,11 +63,18 @@ def fileToNpArray(filename, separator=",", skiplines=1, backoffset=0, lastlines=
             for n in preArray:
                 for a,b in zip(exceptColumns, range(0,len(exceptColumns))):
                     del n[a-b]
-        if debug:
-            print(preArray)
+        #if debug:
+            #print(preArray)
         fileToNpArray.array = np.asarray(preArray, dtype=np.float64)
         if transpose:
             fileToNpArray.array=np.transpose(fileToNpArray.array)
+        try:
+            for n in range(0,len(fileToNpArray.array[0])):
+                fileToNpArray.array[:,n]=fileToNpArray.array[:,n]*unitConversionFactors[n]
+        except IndexError:
+            pass
+        if debug:
+            print(fileToNpArray.array)
         #fileToNpArray.array = preArray
     except ValueError as err:
         raise Exception("Error importing file: "+ filename+": "+str(err)+" at line "+str(x+skiplines))
