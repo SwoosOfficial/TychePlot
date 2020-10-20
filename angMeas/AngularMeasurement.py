@@ -3,10 +3,13 @@ import collections
 import itertools
 import os
 
-cur_dir=os.path.dirname(os.path.realpath(__file__))+"/"
+cur_dir=os.path.dirname(os.path.realpath(__file__))
 
-BLZFiles = {500: cur_dir+"150-BLZ-500-nm.txt", 
-            780: cur_dir+"100-BLZ-780-nm.txt"}
+BLZFiles = {
+            100: os.path.join(cur_dir,"BLZ_100_780nm.wl"), 
+            150: os.path.join(cur_dir,"BLZ_150_500nm.wl"), 
+            300: os.path.join(cur_dir,"BLZ_300_500nm.wl"), 
+}
 class Line:
     def __init__(self, data):
         self.pos = [float(val) for val in data[1:5]]
@@ -133,7 +136,7 @@ class AngularMeasFile:
         return self.data[key]
 
 import matplotlib.pyplot as plt
-def PlotMeasurement(filename,wavelength = -1, BLZFile= 500, index = 0, savepath = ""):
+def PlotMeasurement(filename,wavelength = -1, BLZFile= 150, index = 0, savepath = ""):
     file = filename
     meas = AngularMeasFile(file, BLZFile)
     a_meas = meas.getMeas('ANGULAR_MEAS')
@@ -159,7 +162,7 @@ def PlotMeasurement(filename,wavelength = -1, BLZFile= 500, index = 0, savepath 
             print(file_ending)
             plt.savefig(file_begin+f"_{index}"+file_ending)
         plt.show()
-def PlotSpectrum(filename,angle = -1,w1 = 400, w2 = 800, BLZFile = 500, index = 0, savepath = ""):
+def PlotSpectrum(filename,angle = -1,w1 = 400, w2 = 800, BLZFile = 150, index = 0, savepath = ""):
     file = filename
     meas = AngularMeasFile(file, BLZFile)
     a_meas = meas.getMeas('ANGULAR_MEAS')
@@ -185,7 +188,7 @@ def PlotSpectrum(filename,angle = -1,w1 = 400, w2 = 800, BLZFile = 500, index = 
         if savepath:
             plt.savefig(file_begin+f"_{index}"+file_ending)
         plt.show()
-def CompareMeasurements(filenames, wavelength = -1, BLZFile = 500, index = 0, savepath = ""):
+def CompareMeasurements(filenames, wavelength = -1, BLZFile = 150, index = 0, savepath = ""):
 
     measfiles = [AngularMeasFile(file, BLZFile) for file in filenames]
     a_meas = [meas.getMeas('ANGULAR_MEAS') for meas in measfiles]

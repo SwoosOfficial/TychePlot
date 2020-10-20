@@ -249,7 +249,7 @@ class Data:
         return result
         
     
-    def getFirstIndexWhereGreaterOrEq(self,column,value,tolerance=0, check_seq=1):
+    def getFirstIndexWhereGreaterOrEq(self,column,value,tolerance=0, check_seq=5):
         data=self.getData()
         colVec=data[:,column-1]
         for n in range(0,len(colVec)):
@@ -267,35 +267,35 @@ class Data:
                     return n
         raise IndexError("No Index found where a value is greater than {:7.1E}, invalid limits at column:".format(value)+repr(column)+f"\nColumn is :\n{colVec}")
     
-    def getLastIndexWhereSmallerOrEq(self,column,value,tolerance=0, offset=1, check_seq=1):
+    def getLastIndexWhereSmallerOrEq(self,column,value,tolerance=0, offset=1, check_seq=5):
         data=self.getData()
         colVec=data[:,column-1]
         for n in range(offset,len(colVec)):
             prev=True
             for i in range(1,check_seq):
-                prev= prev and colVec[-n]<=value-tolerance
+                prev= prev and colVec[-(n+i)]<=value-tolerance
             if prev:
                 return -n
         raise IndexError("No Index found where a value is smaller than {:7.1E}, invalid limits at column:".format(value)+repr(column))
     
-    def getLastIndexWhereGreaterOrEq(self,column,value,tolerance=0, check_seq=1):
+    def getLastIndexWhereGreaterOrEq(self,column,value,tolerance=0, check_seq=5):
         data=self.getData()
         colVec=data[:,column-1]
         for n in range(1,len(colVec)):
             prev=True
             for i in range(1,check_seq):
-                prev= prev and colVec[-n]>=value-tolerance
+                prev= prev and colVec[-(n+i)]>=value-tolerance
             if prev:
                 return -n
         raise IndexError("No Index found where a value is greater than {:7.1E}, invalid limits at column:".format(value)+repr(column))
     
-    def getFirstIndexWhereSmallerOrEq(self,column,value,tolerance=0, offset=0, check_seq=1):
+    def getFirstIndexWhereSmallerOrEq(self,column,value,tolerance=0, offset=0, check_seq=5):
         data=self.getData()
         colVec=data[:,column-1]
         for n in range(offset,len(colVec)):
             prev=True
             for i in range(1,check_seq):
-                 prev = prev and colVec[n]<=value-tolerance
+                 prev = prev and colVec[n+i]<=value-tolerance
             if prev:
                 return n
         raise IndexError("No Index found where a value is greater than {:7.1E}, invalid limits at column:".format(value)+repr(column))

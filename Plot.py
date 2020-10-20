@@ -1150,10 +1150,15 @@ class Plot():
                 #labels2 = labels2[0:self.devices]
                 handles=handles+handles2
                 labels=labels+labels2
-            if self.fitList is not None and not self.showFitInLegend:
-                index_list = [True if x not in self.fitLabels+self.partialFitLabels else False for x in labels]
+            if self.fitList is not None:
+                index_list = [True if x not in self.fitLabels+self.partialFitLabels else False for x in labels]#
+                orig_labels=copy.copy(labels)
+                orig_handles=copy.copy(handles)
                 labels = [l for l,index in zip(labels,index_list) if index]
                 handles = [h for h,index in zip(handles,index_list) if index]
+                if self.showFitInLegend:
+                    labels += [l for l,index in zip(orig_labels,index_list) if not index]
+                    handles += [h for h,index in zip(orig_handles,index_list) if not index]
             if self.legendBool:
                 leg=ax.legend(handles, labels, loc=self.legLoc, numpoints=1)
                 leg.get_frame().set_linewidth(self.legendEdgeSize)

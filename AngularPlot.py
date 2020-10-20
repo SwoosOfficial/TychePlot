@@ -7,14 +7,18 @@
 import numpy as np
 import collections
 import itertools
+import os
 
 from Data import Data
 from Plot import Plot
 
-BLZ_path_dict= {
-                  500: "../../TychePlot/angMeas/150-BLZ-500-nm.txt", 
-                  780: "../../TychePlot/angMeas/100-BLZ-780-nm.txt"
-                }
+cur_dir=os.path.dirname(os.path.realpath(__file__))
+subdir="angMeas"
+BLZ_path_dict = {
+            100: os.path.join(cur_dir,subdir,"BLZ_100_780nm.wl"), 
+            150: os.path.join(cur_dir,subdir,"BLZ_150_500nm.wl"), 
+            300: os.path.join(cur_dir,subdir,"BLZ_300_500nm.wl"), 
+}
 
 class Line:
     def __init__(self, data):
@@ -47,7 +51,7 @@ class Measurement:
         pass
     @staticmethod
     def getMeasType(data, key, wavelengths):
-        if key == 'ANGULAR_MEAS' or key =='ANGULARMEAS0_MEAS':
+        if key == 'ANGULAR_MEAS' or key =='ANGULARMEAS0_MEAS' or key == 'ANGULAR0':
             return AngularMeasurement(data, key, wavelengths)
         else:
             return None
@@ -154,12 +158,11 @@ class AngularPlot(Plot):
                  name,
                  fileList,
                  BLZFiles = BLZ_path_dict,
-                 BLZFile= 500,
+                 BLZFile= 150,
                  index=0,
                  meas_type='ANGULAR_MEAS',
-                 wavelength=-1,
-                 angle=-1,
-                 plotSpectrum=False,
+                 wavelengths=-1,
+                 angles=None,
                  showColAxType=["lin","lin","lin","lin","lin"],
                  showColAxLim=[None,None,None,None,None],
                  showColLabel= ["", "Angle", "Intensity (s-polarised)", "Intensity (p-polarised)", "Intensity (s-polarised)", "Intensity (p-polarised)"],
@@ -169,8 +172,8 @@ class AngularPlot(Plot):
         self.BLZFile=BLZFile
         self.index=index
         self.meas_type=meas_type
-        self.wavelength=wavelength
-        self.angle=angle
+        self.wavelengths=wavelengths
+        self.angles=angles
         self.plotSpectrum=plotSpectrum
         Plot.__init__(self, name, fileList, dataImported=True, showColAxType=showColAxType,
                  showColAxLim=showColAxLim,
@@ -181,6 +184,8 @@ class AngularPlot(Plot):
     def importData(self):
         dataList=[]
         index=self.index
+        wavelengths=
+        angles=
         for sampleList in self.fileList:
             dataSubList=[]
             for fileZ in sampleList:
