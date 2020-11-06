@@ -48,6 +48,10 @@ class Plot():
     
     
     @classmethod
+    def gauss(cls, x, mu, amp, sigma):
+        return amp/(np.sqrt(2*np.pi*sigma**2))*np.exp(-((x-mu)**2/(2*sigma**2)))
+    
+    @classmethod
     def equalizeRanges(cls, data, norm=(390,780,401)):
         arr, arr2=data.getSplitData2D()
         f=inter.CubicSpline(arr,arr2,extrapolate=True)
@@ -216,7 +220,7 @@ class Plot():
                  xCol2=0,
                  xColOrig=1,
                  title=None,
-                 HWratio=3/4, # height to width ratio
+                 HWratio=1,#3/4, # height to width ratio
                  fig_width_pt=fig_width_default_pt, # get it by \the\textwidth
                  titleBool=True,
                  legendEdgeSize=1,
@@ -294,6 +298,7 @@ class Plot():
                  subdir=None,
                  iterBoth=False,
                  append_col_in_label=True,
+                 ax2colors=None,
                  #ax_aspect='auto',
                 ):
         #static inits
@@ -465,6 +470,7 @@ class Plot():
         self.markerFillstyles=markerFillstyles
         self.iterBoth=iterBoth
         self.append_col_in_label=append_col_in_label
+        self.ax2colors=ax2colors
         #self.ax_aspect=ax_aspect
         #inits
         #if mpl_use == "pgf":
@@ -504,7 +510,8 @@ class Plot():
         matplotlib.pyplot.clf()
         self.__initTex(customFontsize=self.customFontsize)
         fig = matplotlib.pyplot.figure(figsize=self._figsize())
-        ax = fig.add_subplot(111)
+        #ax = fig.add_subplot(111)
+        ax=matplotlib.pyplot.axes([0.15, 0.15, 0.7, 0.7])
         #ax.set_aspect(self.ax_aspect)
         #ax=AA.Subplot(fig, 111)
         #fig.add_subplot(ax)
@@ -567,6 +574,7 @@ class Plot():
             elif type(fitTuple) is not tuple and type(fitTuple) is list:
                 fitSubList=[]
                 n=0
+                print(fitTuple)
                 for fTuple in fitTuple:
                     if n==0:
                         expectCopy=expect
@@ -1047,7 +1055,10 @@ class Plot():
             ax2markers=self.markers#[::-self.markerOffset]
             if self.iterBoth:
                 ax1color=self.colors
-                ax2color=self.colors
+                if self.ax2colors is not None:
+                    ax2color=self.ax2colors
+                else:
+                    ax2color=self.colors
             else:
                 ax1color=[self.ax1color]*len(expectData)
                 ax2color=[self.ax2color]*len(expectData)
@@ -1058,7 +1069,10 @@ class Plot():
                 markers=[self.mk]*len(expectData)
             ax2markers=[self.ax2mk]*len(expectData)
             ax1color=self.colors
-            ax2color=self.colors
+            if self.ax2colors is not None:
+                ax2color=self.ax2colors
+            else:
+                ax2color=self.colors
         fillstyles=[self.markerFillstyles[0]]*len(expectData)
         ax2fillstyles=[self.markerFillstyles[1]]*len(expectData)
         mk=[""]*len(markers)
@@ -1164,7 +1178,7 @@ class Plot():
                 leg.get_frame().set_linewidth(self.legendEdgeSize)
             if self.titleBool:
                 ax.set_title(self.title, fontsize=self.titleFontsize)
-            matplotlib.pyplot.tight_layout()
+            #matplotlib.pyplot.tight_layout()
             if self.xCol2 != 0:
                 axX2.set_xticklabels(self.xColTicksToXCol2Ticks(ax.get_xticks()))
             self.saveFig()
