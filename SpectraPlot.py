@@ -83,11 +83,6 @@ class SpectraPlot(Plot):
         except:
             return b/(value-np.amin(a))
     
-
-    @classmethod
-    def gauss(cls, x, mu, amp, sigma):
-        return amp/(np.sqrt(2*np.pi*sigma**2))*np.exp(-((x-mu)**2/(2*sigma**2)))
-    
     @classmethod
     def doubleGauss(cls, x, mu, amp, sigma, mu2, amp2, sigma2):
         return amp/(np.sqrt(2*np.pi*sigma**2))*np.exp(-((x-mu)**2/(2*sigma**2)))+amp2/(np.sqrt(2*np.pi*sigma2**2))*np.exp(-((x-mu2)**2/(2*sigma2**2)))
