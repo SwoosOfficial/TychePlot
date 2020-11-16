@@ -299,6 +299,8 @@ class Plot():
                  iterBoth=False,
                  append_col_in_label=True,
                  ax2colors=None,
+                 axRect=[0.15,0.15,0.7,0.7],
+                 labelPad=None,
                  #ax_aspect='auto',
                 ):
         #static inits
@@ -471,6 +473,8 @@ class Plot():
         self.iterBoth=iterBoth
         self.append_col_in_label=append_col_in_label
         self.ax2colors=ax2colors
+        self.axRect=axRect
+        self.labelpad=labelPad
         #self.ax_aspect=ax_aspect
         #inits
         #if mpl_use == "pgf":
@@ -511,7 +515,7 @@ class Plot():
         self.__initTex(customFontsize=self.customFontsize)
         fig = matplotlib.pyplot.figure(figsize=self._figsize())
         #ax = fig.add_subplot(111)
-        ax=matplotlib.pyplot.axes([0.15, 0.15, 0.7, 0.7])
+        ax=matplotlib.pyplot.axes(self.axRect)
         #ax.set_aspect(self.ax_aspect)
         #ax=AA.Subplot(fig, 111)
         #fig.add_subplot(ax)
@@ -538,8 +542,11 @@ class Plot():
                 "text.usetex": True,    # use inline math for ticks
                 "axes.formatter.use_mathtext": True,
                 "pgf.rcfonts": False, 
-                "pgf.preamble": r"\usepackage{amsmath}\usepackage{upgreek}\usepackage{lmodern}\usepackage{sfmath}",#"#\usepackage{lmodern}\usepackage{fontspec}\setmainfont{Latin Modern Sans}",
-                #"text.latex.preamble": r"\usepackage{amsmath}\usepackage{upgreek}\usepackage{lmodern}\usepackage{sfmath}\setmainfont{Latin Modern Sans}",#"\usepackage{lmodern}\usepackage{fontspec}\setmainfont{Latin Modern Sans}",
+                "pgf.preamble": "\\usepackage{amsmath}\n"+
+                                "\\usepackage{upgreek}\n"+
+                                "\\usepackage{lmodern}\n"+
+                                "\\usepackage{sfmath}\n"+
+                               f"\\renewcommand{{\\tfrac}}[2]{{\\genfrac{{}}{{}}{{{0.6*self.scaleX:0.3f}pt}}{{1}}{{#1}}{{#2}}}}",
                 "lines.markersize": self.markerSize
             }
         if self.customFontsize is not None and len(self.customFontsize) == 5:
@@ -659,6 +666,7 @@ class Plot():
         mpl.rcParams['ytick.minor.width'] = self.scaleX*mpl.rcParams['ytick.minor.width']
         mpl.rcParams['ytick.minor.pad'] = self.scaleX*mpl.rcParams['ytick.minor.pad']
         mpl.rcParams['grid.linewidth'] = self.scaleX*mpl.rcParams['grid.linewidth']
+        mpl.rcParams["pgf.preamble"] = "\\usepackage{amsmath}\n"+"\\usepackage{upgreek}\n"+"\\usepackage{lmodern}\n"+"\\usepackage{sfmath}\n"+f"\\renewcommand{{\\tfrac}}[2]{{\\genfrac{{}}{{}}{{{0.6*self.scaleX:0.3f}pt}}{{1}}{{#1}}{{#2}}}}"
         
         
     def _rescaleRcParams(self):
@@ -679,6 +687,8 @@ class Plot():
         mpl.rcParams['ytick.minor.width'] = 1/self.scaleX*mpl.rcParams['ytick.minor.width']
         mpl.rcParams['ytick.minor.pad'] = 1/self.scaleX*mpl.rcParams['ytick.minor.pad']
         mpl.rcParams['grid.linewidth'] = 1/self.scaleX*mpl.rcParams['grid.linewidth']
+        mpl.rcParams["pgf.preamble"] = "\\usepackage{amsmath}\n"+"\\usepackage{upgreek}\n"+"\\usepackage{lmodern}\n"+"\\usepackage{sfmath}\n"+f"\\renewcommand{{\\tfrac}}[2]{{\\genfrac{{}}{{}}{{{0.6:0.3f}pt}}{{1}}{{#1}}{{#2}}}}"
+
         
     
     
@@ -686,8 +696,8 @@ class Plot():
     def saveFig(self):
         try:
             if self.useTex:
-                self.fig.savefig(self.processFileName(option=".pdf"), bbox_inches='tight')
-                self.fig.savefig(self.processFileName(option=".pgf"), bbox_inches='tight')
+                self.fig.savefig(self.processFileName(option=".pdf"))#, bbox_inches='tight')
+                self.fig.savefig(self.processFileName(option=".pgf"))#, bbox_inches='tight')
             else:
                 #matplotlib.pyplot.show()
                 self.fig.savefig(self.processFileName(option=".png"))
@@ -1096,10 +1106,10 @@ class Plot():
             self.fig, self.ax = self._newFig()
             ax= self.ax
             xLabel=self.showColLabelUnit[self.xCol]
-            ax.set_xlabel(xLabel)
+            ax.set_xlabel(xLabel, labelpad=self.labelpad)
             if self.showColAxType[self.xCol] == "log":
                 ax.set_xscale("log")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
-            ax.set_ylabel(self.axYLabel)
+            ax.set_ylabel(self.axYLabel, labelpad=self.labelpad)
             #ax.set_xticklabels(ax.get_xticks())
             
             try:
@@ -1118,7 +1128,7 @@ class Plot():
                     if True in [a[1] for a in self.show]: 
                         self.ax2= ax.twinx()
                         ax2=self.ax2
-                        ax2.set_ylabel(self.ax2YLabel)
+                        ax2.set_ylabel(self.ax2YLabel, labelpad=self.labelpad)
                         if self.showColAxType[self.showCol2] == "log":
                             ax2.set_yscale("log")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
                         if self.ax2YLim is not None:
@@ -1127,7 +1137,7 @@ class Plot():
                 if True in [a[1] for a in self.show]: 
                     self.ax2= ax.twinx()
                     ax2=self.ax2
-                    ax2.set_ylabel(self.ax2YLabel)
+                    ax2.set_ylabel(self.ax2YLabel, labelpad=self.labelpad)
                     if self.showColAxType[self.showCol2[0]] == "log":
                         ax2.set_yscale("log")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
                     if self.ax2YLim is not None:
@@ -1146,7 +1156,7 @@ class Plot():
                 self.axX2=ax.twiny()
                 axX2=self.axX2
                 axX2.set_xlim(ax.get_xlim())
-                axX2.set_xlabel(self.ax2XLabel)
+                axX2.set_xlabel(self.ax2XLabel, labelpad=self.labelpad)
                 if self.showColAxType[self.xCol2] == "log":
                     axX2.set_xscale("log")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
                 if self.ax2XLim is not None:
