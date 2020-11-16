@@ -149,6 +149,7 @@ class SpectraPlot(Plot):
                  showFWHM=False,
                  ticklabelformat="plain",
                  rb_pos=-0.035,
+                 rb_h=0.01,
                  **kwargs
                 ):
         if rainbowMode:
@@ -171,6 +172,7 @@ class SpectraPlot(Plot):
         self.postprocess_normalization=False
         self.ticklabelformat=ticklabelformat
         self.rb_pos=rb_pos
+        self.rb_h=rb_h
         #self.dataList=self.importData()
    
     def processFileName(self, option=".pdf"):
@@ -397,11 +399,11 @@ class SpectraPlot(Plot):
         S  = 380 
         N  = 670
         if self.normalizeMode == "single" or self.normalizeMode == "global":
-            h = 0.01
-            p = -0.035
+            h = self.rb_h
+            p = self.rb_pos
         else:
             maxi=np.amax(np.asarray([np.amax(expect.getSplitData2D(yCol=self.showCol)[1]) for expect in expectData]))
-            h = 0.01*maxi
+            h = self.rb_h*maxi
             p = self.rb_pos*maxi
         if not self.rainbowMode:
             for n, (x,y) in enumerate(zip(X,Y)):
