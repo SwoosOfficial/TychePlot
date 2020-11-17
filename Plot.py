@@ -301,6 +301,7 @@ class Plot():
                  ax2colors=None,
                  axRect=[0.15,0.15,0.7,0.7],
                  labelPad=None,
+                 saveProps=None,
                  #ax_aspect='auto',
                 ):
         #static inits
@@ -475,6 +476,7 @@ class Plot():
         self.ax2colors=ax2colors
         self.axRect=axRect
         self.labelpad=labelPad
+        self.saveProps=saveProps
         #self.ax_aspect=ax_aspect
         #inits
         #if mpl_use == "pgf":
@@ -694,20 +696,14 @@ class Plot():
     
     
     def saveFig(self):
-        try:
-            if self.useTex:
-                self.fig.savefig(self.processFileName(option=".pdf"))#, bbox_inches='tight')
-                self.fig.savefig(self.processFileName(option=".pgf"))#, bbox_inches='tight')
-            else:
-                #matplotlib.pyplot.show()
-                self.fig.savefig(self.processFileName(option=".png"))
-        except ValueError:
-            if self.useTex:
-                self.fig.savefig(self.processFileName(option=".pdf"))
-                self.fig.savefig(self.processFileName(option=".pgf"))
-            else:
-                #matplotlib.pyplot.show()
-                self.fig.savefig(self.processFileName(option=".png"))
+        if self.useTex:
+            self.fig.savefig(self.processFileName(option=".pdf"))#, bbox_inches='tight')
+            self.fig.savefig(self.processFileName(option=".pgf"))#, bbox_inches='tight')
+        else:
+            self.fig.savefig(self.processFileName(option=".png"))
+        if self.saveProps is not None:
+            option=self.saveProps.pop("saveAs")
+            self.fig.savefig(self.processFileName(option=option), **self.saveProps)
             
     def processFileName_makedirs(self):
         try:
