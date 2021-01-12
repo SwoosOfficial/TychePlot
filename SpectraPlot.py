@@ -427,8 +427,8 @@ class SpectraPlot(Plot):
     def xColTicksToXCol2Ticks(self, ticks):
         if self.xCol==1 and self.xCol2==4:
             ticks=ticks**-1*self.convFac
-            ticks=np.around(ticks,decimals=1)
-            return ["{:2.1f}".format(tick) for tick in ticks]
+            ticks=np.around(ticks,decimals=2)
+            return ["{:3.2f}".format(tick) for tick in ticks]
         elif self.xCol==4 and self.xCol2==1:
             ticks=ticks**-1*self.convFac
             ticks=np.around(ticks,decimals=0)
