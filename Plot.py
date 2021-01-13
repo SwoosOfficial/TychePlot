@@ -819,7 +819,16 @@ class Plot():
                     descList.append(deviceData[0].desc)
                 except IndexError:
                     descList.append("")
-            medColList=[[np.median(element, axis=0) for element in column] for column in dataColList]
+            medColList=[]
+            for column in dataColList:
+                medColList_sub=[]
+                for element in column:
+                    try:
+                        median=np.median(element, axis=0)
+                        medColList_sub.append(median)
+                    except ValueError as e:
+                        raise Exception(f"Incorrect input data {element}")
+                medColList.append(medColList_sub)
             medList=[[medColList[m][n] for m in range(0,qtyCol)] for n in range(0,len(dataList))]
             medDataList=[Data.mergeData(medData) for medData in medList]
             devDataList=[np.sqrt(np.sum([np.square(np.subtract(data,tempData.getData())) for tempData in deviceData],axis=0)/len(deviceData)) for data, deviceData in zip(medDataList, dataList)]
@@ -912,7 +921,7 @@ class Plot():
                 except (ValueError,IndexError):
                     raise
                     #warnings.warn("Unsupported Input for Error estimation given")
-                    expectData, deviaData = ([],[])    
+                    expectData, deviaData = ([],[])
                 self.expectData=expectData
                 self.deviaData=deviaData
                 self.logErr=self.calcLogErr(self.expectData,self.deviaData)
@@ -975,7 +984,7 @@ class Plot():
                         yerr=None
                     AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=showCol), yerr=yerr, c=ax1color[n], capsize=self.capsize, capthick=self.capthick , ls=linestyles[n], marker=markerstyles[n], label=labelY, errorevery=self.showErrorOnlyEvery[n], fillstyle=fillstyles[n])
                 except TypeError:
-                    for singleShowCol,singleLabelY in zip(showCol,labelY):
+                    for singleShowCol,singleLabelY in zip(showCol,labelY):    
                         AX=ax.errorbar(*expectData[n].getSplitData2D(xCol=xCol, yCol=singleShowCol), yerr=[self.logErr[self.errorTypeDown][n][:,showCol-1],self.logErr[self.errorTypeUp][n][:,showCol-1]], c=ax1color[n], capsize=self.capsize, capthick=self.capthick, ls=linestyles[n], marker=markerstyles[n], label=singleLabelY, errorevery=self.showErrorOnlyEvery[n], fillstyle=fillstyles[n])
             else:
                 try:
