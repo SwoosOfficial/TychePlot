@@ -161,20 +161,23 @@ class AngularPlot(Plot):
                  BLZFile= 150,
                  index=0,
                  meas_type='ANGULAR_MEAS',
-                 wavelengths=-1,
-                 angles=None,
+                 wavelength=-1,
+                 angle=None,
                  showColAxType=["lin","lin","lin","lin","lin"],
                  showColAxLim=[None,None,None,None,None],
                  showColLabel= ["", "Angle", "Intensity (s-polarised)", "Intensity (p-polarised)", "Intensity (s-polarised)", "Intensity (p-polarised)"],
                  showColLabelUnit=["", "Angle (°)", "s-polarised Intensity (a.u.)", "p-polarised Intensity (a.u)", "s-polarised Intensity (a.u.)", "p-polarised Intensity (a.u)"],
+                 plotSpectrum=False,
+                 overlay=False,
                 **kwargs):
         self.BLZFiles=BLZFiles
         self.BLZFile=BLZFile
         self.index=index
         self.meas_type=meas_type
-        self.wavelengths=wavelengths
-        self.angles=angles
+        self.wavelength=wavelength
+        self.angle=angle
         self.plotSpectrum=plotSpectrum
+        self.overlay=overlay
         Plot.__init__(self, name, fileList, dataImported=True, showColAxType=showColAxType,
                  showColAxLim=showColAxLim,
                  showColLabel=showColLabel,
@@ -184,8 +187,8 @@ class AngularPlot(Plot):
     def importData(self):
         dataList=[]
         index=self.index
-        wavelengths=
-        angles=
+        #wavelengths=
+        #angles=
         for sampleList in self.fileList:
             dataSubList=[]
             for fileZ in sampleList:
@@ -196,7 +199,7 @@ class AngularPlot(Plot):
                 else:
                     w = self.wavelength
                 if (self.angle == -1):
-                    angle = None    
+                    angle = None
                 else:
                     angle = self.angle
                 if self.plotSpectrum:
@@ -204,7 +207,10 @@ class AngularPlot(Plot):
                     self.showColLabel[1]="Wavelength"
                     self.showColLabelUnit[1]="Wavelength (nm)"
                 else:
-                    data=Data(Data.mergeData([a_meas.getAngles(0, index), a_meas.getDataAtWavelength(w, 0, index),a_meas.getDataAtWavelength(w, 90, index)]))
+                    if self.overlay:
+                        data=Data(Data.mergeData([np.abs(a_meas.getAngles(0, index)), a_meas.getDataAtWavelength(w, 0, index), a_meas.getDataAtWavelength(w, 90, index)]))
+                    else:
+                        data=Data(Data.mergeData([a_meas.getAngles(0, index), a_meas.getDataAtWavelength(w, 0, index),a_meas.getDataAtWavelength(w, 90, index)]))
                 data.limitData(xLim=self.xLimOrig)
                 dataSubList.append(data)
             dataList.append(dataSubList)
