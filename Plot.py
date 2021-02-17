@@ -45,7 +45,10 @@ class Plot():
         (23/255, 190/255, 207/255, 1),
         (248/255, 229/255, 32/255, 1),
         (44/255, 160/255, 44/255, 1)]
-    
+    default_font="Latin Modern Sans"
+    default_font_size=[10,10,6,6,6]
+    axRect_default=[0.15,0.15,0.7,0.7]
+    default_marker_size=6
     
     @classmethod
     def gauss(cls, x, mu, amp, sigma):
@@ -120,90 +123,129 @@ class Plot():
                 m+=1
         con_file.close()
         return con_filename
+   
+    @classmethod
+    def scaleRcParams(cls, scaleX):
+        mpl.rcParams["lines.linewidth"]=scaleX*mpl.rcParams["lines.linewidth"]
+        mpl.rcParams["lines.markeredgewidth"]=scaleX*mpl.rcParams["lines.markeredgewidth"]
+        mpl.rcParams["lines.markersize"]=scaleX*mpl.rcParams["lines.markersize"]
+        mpl.rcParams['axes.linewidth'] = scaleX*mpl.rcParams["axes.linewidth"]
+        mpl.rcParams['xtick.major.size'] = scaleX*mpl.rcParams['xtick.major.size']
+        mpl.rcParams['xtick.major.width'] = scaleX*mpl.rcParams['xtick.major.width']
+        mpl.rcParams['xtick.major.pad'] = scaleX*mpl.rcParams['xtick.major.pad']
+        mpl.rcParams['xtick.minor.size'] = scaleX*mpl.rcParams['xtick.minor.size']
+        mpl.rcParams['xtick.minor.width'] = scaleX*mpl.rcParams['xtick.minor.width']
+        mpl.rcParams['xtick.minor.pad'] = scaleX*mpl.rcParams['xtick.minor.pad']
+        mpl.rcParams['ytick.major.size'] = scaleX*mpl.rcParams['ytick.major.size']
+        mpl.rcParams['ytick.major.width'] = scaleX*mpl.rcParams['ytick.major.width']
+        mpl.rcParams['ytick.major.pad'] = scaleX*mpl.rcParams['ytick.major.pad']
+        mpl.rcParams['ytick.minor.size'] = scaleX*mpl.rcParams['ytick.minor.size']
+        mpl.rcParams['ytick.minor.width'] = scaleX*mpl.rcParams['ytick.minor.width']
+        mpl.rcParams['ytick.minor.pad'] = scaleX*mpl.rcParams['ytick.minor.pad']
+        mpl.rcParams['grid.linewidth'] = scaleX*mpl.rcParams['grid.linewidth']
+        mpl.rcParams["pgf.preamble"] = "\\usepackage{amsmath}\n"+"\\usepackage{upgreek}\n"+"\\usepackage{lmodern}\n"+"\\usepackage{sfmath}\n"+f"\\renewcommand{{\\tfrac}}[2]{{\\genfrac{{}}{{}}{{{0.6*scaleX:0.3f}pt}}{{1}}{{#1}}{{#2}}}}"
         
+    @classmethod        
+    def rescaleRcParams(cls, scaleX):
+        mpl.rcParams["lines.linewidth"]=1/scaleX*mpl.rcParams["lines.linewidth"]
+        mpl.rcParams["lines.markeredgewidth"]=1/scaleX*mpl.rcParams["lines.markeredgewidth"]
+        mpl.rcParams["lines.markersize"]=1/scaleX*mpl.rcParams["lines.markersize"]
+        mpl.rcParams['axes.linewidth'] = 1/scaleX*mpl.rcParams["axes.linewidth"]
+        mpl.rcParams['xtick.major.size'] = 1/scaleX*mpl.rcParams['xtick.major.size']
+        mpl.rcParams['xtick.major.width'] = 1/scaleX*mpl.rcParams['xtick.major.width']
+        mpl.rcParams['xtick.major.pad'] = 1/scaleX*mpl.rcParams['xtick.major.pad']
+        mpl.rcParams['xtick.minor.size'] = 1/scaleX*mpl.rcParams['xtick.minor.size']
+        mpl.rcParams['xtick.minor.width'] = 1/scaleX*mpl.rcParams['xtick.minor.width']
+        mpl.rcParams['xtick.minor.pad'] = 1/scaleX*mpl.rcParams['xtick.minor.pad']
+        mpl.rcParams['ytick.major.size'] = 1/scaleX*mpl.rcParams['ytick.major.size']
+        mpl.rcParams['ytick.major.width'] = 1/scaleX*mpl.rcParams['ytick.major.width']
+        mpl.rcParams['ytick.major.pad'] = 1/scaleX*mpl.rcParams['ytick.major.pad']
+        mpl.rcParams['ytick.minor.size'] = 1/scaleX*mpl.rcParams['ytick.minor.size']
+        mpl.rcParams['ytick.minor.width'] = 1/scaleX*mpl.rcParams['ytick.minor.width']
+        mpl.rcParams['ytick.minor.pad'] = 1/scaleX*mpl.rcParams['ytick.minor.pad']
+        mpl.rcParams['grid.linewidth'] = 1/scaleX*mpl.rcParams['grid.linewidth']
+        mpl.rcParams["pgf.preamble"] = "\\usepackage{amsmath}\n"+"\\usepackage{upgreek}\n"+"\\usepackage{lmodern}\n"+"\\usepackage{sfmath}\n"+f"\\renewcommand{{\\tfrac}}[2]{{\\genfrac{{}}{{}}{{{0.6:0.3f}pt}}{{1}}{{#1}}{{#2}}}}"
     
-    def __initFileList(self, fileList, errors, labels, show, fitLabels, showLines, showMarkers):
-        if self.overrideFileList:
-            self.fileList=[]
-            self.errors=[]
-            self.labels=[]
-            self.show=[]
-            self.fitLabels=[]
-        else:
-            try:
-                fileList_cor=[]
-                for file in fileList:
-                    fileList_sub_cor=[]
-                    for filesub in file:
-                        if isinstance(filesub,list):
-                            new_file=self.concentenate_files(filesub)
-                        else:
-                            new_file=filesub
-                        fileList_sub_cor.append(new_file)
-                    fileList_cor.append(fileList_sub_cor)    
-                self.fileList=fileList_cor
-            except IndexError:
-                raise ListShapeException("The filelist has to be formatted like: [[sampleApx1,sampleApx2],[sampleBpx1,sampleBpx2]]")
-            if errors is None and labels is None:
-                self.show=[[True,True] for device in self.fileList]
-                self.errors=self.show
-                self.labels=["Sample {:d}".format(m+1) for m in range(0,len(self.fileList))]
-            elif labels is not None:
-                try:
-                    temp=[labels[m] for m in range(0,len(self.fileList))]
-                    self.labels=labels
-                except IndexError:
-                    raise ListShapeException("The labels' list has to be formatted like: [\"sampleALabel\",\"sampleBLabel\"]")
-                self.errors=[[deviceLabel != "", deviceLabel != ""] for deviceLabel in self.labels]
-                self.show=self.errors
-            else:
-                try:
-                    if self.showCol == 0 or self.showCol2 == 0:
-                        temp=[errors[m][0] for m in range(0,len(self.fileList))]
-                    else:
-                        temp=[errors[m][1] for m in range(0,len(self.fileList))]
-                    self.errors=errors
-                    self.show=self.errors
-                except IndexError:
-                    raise ListShapeException("The errors' list has to be formatted like: [[sampleAerrorAxis1,sampleAerrorAxis2],[sampleBerrorAxis1,sampleBerrorAxis2]]")
-                except TypeError:
-                    if type(errors) == bool or isinstance(errors, (list,tuple)):
-                        self.show=[[True,True] for device in self.fileList]
-                    else:
-                        raise ListShapeException("The error's TypeError")
-                
-                self.labels=["Sample {:d}".format(m+1) for m in range(0,len(self.fileList))]
-            if show is not None:
-                try:
-                    if self.showCol == 0 or self.showCol2 == 0:
-                        temp=[show[m][0] for m in range(0,len(self.fileList))]
-                    else:
-                        temp=[show[m][1] for m in range(0,len(self.fileList))]
-                    self.show=show
-                except IndexError:
-                    raise ListShapeException("The show list has to be formatted like: [[sampleAshowAxis1,sampleAshowAxis2],[sampleBshowAxis1,sampleBshowAxis2]]")
-            if errors is not None:
-                if errors is False:
-                    self.errors=[[False,False] for device in self.fileList]
-                elif errors is True:
-                    self.errors=[[True,True] for device in self.fileList]
-                elif errors[0] is True and errors[1] is False:
-                    self.errors=[[True,False] for device in self.fileList]
-                elif errors[0] is False and errors[1] is True:
-                    self.errors=[[True,False] for device in self.fileList]
-            if fitLabels is None:
-                self.fitLabels=["Fit of "+label for label in self.labels]
-            else:
-                self.fitLabels=fitLabels
-            if isinstance(showLines,list):
-                self.showLines=showLines
-            else:
-                self.showLines=[[showLines,showLines] for device in self.fileList]
-            if isinstance(showMarkers,list):
-                self.showMarkers=showMarkers
-            else:
-                self.showMarkers=[[showMarkers,showMarkers] for device in self.fileList]    
+    @classmethod
+    def set_size(w,h, ax=None):
+        """ w, h: width, height in inches """
+        if not ax: ax=plt.gca()
+        l = ax.figure.subplotpars.left
+        r = ax.figure.subplotpars.right
+        t = ax.figure.subplotpars.top
+        b = ax.figure.subplotpars.bottom
+        figw = float(w)/(r-l)
+        figh = float(h)/(t-b)
+        ax.figure.set_size_inches(figw, figh)
 
+    @classmethod    
+    def figsize(cls, fig_width_pt, fixedFigWidth, scaleX, HWratio):
+        inches_per_pt = 1.0/72.27# Convert pt to inch
+        if fixedFigWidth:
+            fig_width = fig_width_pt*inches_per_pt
+        else:
+            fig_width = fig_width_pt*inches_per_pt*scaleX   # width in inches
+        fig_height = fig_width*HWratio                  # height in inches
+        fig_size = [fig_width,fig_height]
+        return fig_size
+
+    @classmethod
+    def newFig(cls, customFontsize=None, font=default_font, axRect=axRect_default, fig_width_pt=fig_width_default_pt, fixedFigWidth=False, scaleX=1, HWratio=1):
+        matplotlib.pyplot.clf()
+        cls.initTex(customFontsize=customFontsize, font=font)
+        fig = matplotlib.pyplot.figure(figsize=cls.figsize(fig_width_pt, fixedFigWidth, scaleX, HWratio))
+        ax=matplotlib.pyplot.axes(axRect)
+        return fig, ax
+
+    @classmethod
+    def initTex(cls, customFontsize=None, font=default_font, font_size=default_font_size, scaleX=1, marker_size=default_marker_size):
+        pgf_with_lualatex={
+                "pgf.texsystem": pgfSys,
+                "font.family": "sans-serif", # use serif/main font for text elements
+                "font.sans-serif": [font],
+                "mathtext.fallback": "cm",
+                "axes.unicode_minus": False,
+                "mathtext.fontset":"custom",
+                "mathtext.tt": font,
+                "mathtext.rm": font,
+                "mathtext.sf": font,
+                "mathtext.it": font,
+                "font.size": font_size[0],
+                "axes.labelsize": font_size[1],               # LaTeX default is 10pt font.
+                "legend.fontsize": font_size[2],               # Make the legend/label fonts a little smaller
+                "xtick.labelsize": font_size[3],
+                "ytick.labelsize": font_size[4],
+                "text.usetex": True,    # use inline math for ticks
+                "axes.formatter.use_mathtext": True,
+                "pgf.rcfonts": False, 
+                "pgf.preamble": "\\usepackage{amsmath}\n"+
+                                "\\usepackage{upgreek}\n"+
+                                "\\usepackage{lmodern}\n"+
+                                "\\usepackage{sfmath}\n"+
+                               f"\\renewcommand{{\\tfrac}}[2]{{\\genfrac{{}}{{}}{{{0.6*scaleX:0.3f}pt}}{{1}}{{#1}}{{#2}}}}",
+                "lines.markersize": marker_size
+            }
+        if customFontsize is not None and len(customFontsize) == 5:
+            pgf_with_lualatex.update({
+                "font.size": customFontsize[0],
+                "axes.labelsize": customFontsize[1],               # LaTeX default is 10pt font.
+                "legend.fontsize": customFontsize[2],               # Make the legend/label fonts a little smaller
+                "xtick.labelsize": customFontsize[3],
+                "ytick.labelsize": customFontsize[4],
+            })
+        else:
+            pgf_with_lualatex.update({
+                "pgf.texsystem": pgfSys,
+                "font.size": 12,
+                "axes.labelsize": "medium",               # LaTeX default is 10pt font.
+                "legend.fontsize": "small",               # Make the legend/label fonts a little smaller
+                "xtick.labelsize": "medium",
+                "ytick.labelsize": "medium",
+            })
+        mpl.rcParams.update(pgf_with_lualatex)
+        cls.scaleRcParams(scaleX)
+        
+        
     def __init__(self,
                  name,
                  fileList,
@@ -284,7 +326,7 @@ class Plot():
                  titleFontsize="x-large",
                  customLabelAx2=None,
                  doNotFit=False,
-                 font="Latin Modern Sans",
+                 font=default_font,
                  filenamePrefix=None,
                  newFileList=None,
                  concentenate_files_instead_of_avg=False,
@@ -293,13 +335,13 @@ class Plot():
                  partialFitLabels=[],
                  showLines=True,
                  showMarkers=False,
-                 markerSize=6.0,
+                 markerSize=default_marker_size,
                  markerFillstyles=['full','none'],
                  subdir=None,
                  iterBoth=False,
                  append_col_in_label=True,
                  ax2colors=None,
-                 axRect=[0.15,0.15,0.7,0.7],
+                 axRect=axRect_default,
                  labelPad=None,
                  saveProps=None,
                  #ax_aspect='auto',
@@ -488,91 +530,89 @@ class Plot():
         else:
             self.__initFileList(fileList, errors, labels, show, fitLabels, showLines, showMarkers)
         self.dataList=self.importData()
-
-        
-    def _set_size(w,h, ax=None):
-        """ w, h: width, height in inches """
-        if not ax: ax=plt.gca()
-        l = ax.figure.subplotpars.left
-        r = ax.figure.subplotpars.right
-        t = ax.figure.subplotpars.top
-        b = ax.figure.subplotpars.bottom
-        figw = float(w)/(r-l)
-        figh = float(h)/(t-b)
-        ax.figure.set_size_inches(figw, figh)
-
-        
-    def _figsize(self):
-        inches_per_pt = 1.0/72.27# Convert pt to inch
-        if self.fixedFigWidth:
-            fig_width = self.fig_width_pt*inches_per_pt
+    
+    
+    def __initFileList(self, fileList, errors, labels, show, fitLabels, showLines, showMarkers):
+        if self.overrideFileList:
+            self.fileList=[]
+            self.errors=[]
+            self.labels=[]
+            self.show=[]
+            self.fitLabels=[]
         else:
-            fig_width = self.fig_width_pt*inches_per_pt*self.scaleX   # width in inches
-        fig_height = fig_width*self.HWratio                  # height in inches
-        fig_size = [fig_width,fig_height]
-        return fig_size
-
-    def _newFig(self):
-        matplotlib.pyplot.clf()
-        self.__initTex(customFontsize=self.customFontsize)
-        fig = matplotlib.pyplot.figure(figsize=self._figsize())
-        #ax = fig.add_subplot(111)
-        ax=matplotlib.pyplot.axes(self.axRect)
-        #ax.set_aspect(self.ax_aspect)
-        #ax=AA.Subplot(fig, 111)
-        #fig.add_subplot(ax)
-        return fig, ax
-
-    def __initTex(self, customFontsize=None):
-        #self._resetRcParams()
-        pgf_with_lualatex={
-                "pgf.texsystem": pgfSys,
-                "font.family": "sans-serif", # use serif/main font for text elements
-                "font.sans-serif": [self.font],
-                "mathtext.fallback": "cm",
-                "axes.unicode_minus": False,
-                "mathtext.fontset":"custom",
-                "mathtext.tt": self.font,
-                "mathtext.rm": self.font,
-                "mathtext.sf": self.font,
-                "mathtext.it": self.font,
-                "font.size": self.customFontsize[0],
-                "axes.labelsize": self.customFontsize[1],               # LaTeX default is 10pt font.
-                "legend.fontsize": self.customFontsize[2],               # Make the legend/label fonts a little smaller
-                "xtick.labelsize": self.customFontsize[3],
-                "ytick.labelsize": self.customFontsize[4],
-                "text.usetex": True,    # use inline math for ticks
-                "axes.formatter.use_mathtext": True,
-                "pgf.rcfonts": False, 
-                "pgf.preamble": "\\usepackage{amsmath}\n"+
-                                "\\usepackage{upgreek}\n"+
-                                "\\usepackage{lmodern}\n"+
-                                "\\usepackage{sfmath}\n"+
-                               f"\\renewcommand{{\\tfrac}}[2]{{\\genfrac{{}}{{}}{{{0.6*self.scaleX:0.3f}pt}}{{1}}{{#1}}{{#2}}}}",
-                "lines.markersize": self.markerSize
-            }
-        if self.customFontsize is not None and len(self.customFontsize) == 5:
-            pgf_with_lualatex.update({
-                "font.size": self.customFontsize[0],
-                "axes.labelsize": self.customFontsize[1],               # LaTeX default is 10pt font.
-                "legend.fontsize": self.customFontsize[2],               # Make the legend/label fonts a little smaller
-                "xtick.labelsize": self.customFontsize[3],
-                "ytick.labelsize": self.customFontsize[4],
-            })
-        else:
-            pgf_with_lualatex.update({
-                "pgf.texsystem": pgfSys,
-                "font.size": 12,
-                "axes.labelsize": "medium",               # LaTeX default is 10pt font.
-                "legend.fontsize": "small",               # Make the legend/label fonts a little smaller
-                "xtick.labelsize": "medium",
-                "ytick.labelsize": "medium",
-            })
-        if self.useTex== True:
-            mpl.rcParams.update(pgf_with_lualatex)
-        else:
-            mpl.rcParams.update({"text.usetex": False, "backend":"Qt5Agg"})
-        self._scaleRcParams()
+            try:
+                fileList_cor=[]
+                for file in fileList:
+                    fileList_sub_cor=[]
+                    for filesub in file:
+                        if isinstance(filesub,list):
+                            new_file=self.concentenate_files(filesub)
+                        else:
+                            new_file=filesub
+                        fileList_sub_cor.append(new_file)
+                    fileList_cor.append(fileList_sub_cor)    
+                self.fileList=fileList_cor
+            except IndexError:
+                raise ListShapeException("The filelist has to be formatted like: [[sampleApx1,sampleApx2],[sampleBpx1,sampleBpx2]]")
+            if errors is None and labels is None:
+                self.show=[[True,True] for device in self.fileList]
+                self.errors=self.show
+                self.labels=["Sample {:d}".format(m+1) for m in range(0,len(self.fileList))]
+            elif labels is not None:
+                try:
+                    temp=[labels[m] for m in range(0,len(self.fileList))]
+                    self.labels=labels
+                except IndexError:
+                    raise ListShapeException("The labels' list has to be formatted like: [\"sampleALabel\",\"sampleBLabel\"]")
+                self.errors=[[deviceLabel != "", deviceLabel != ""] for deviceLabel in self.labels]
+                self.show=self.errors
+            else:
+                try:
+                    if self.showCol == 0 or self.showCol2 == 0:
+                        temp=[errors[m][0] for m in range(0,len(self.fileList))]
+                    else:
+                        temp=[errors[m][1] for m in range(0,len(self.fileList))]
+                    self.errors=errors
+                    self.show=self.errors
+                except IndexError:
+                    raise ListShapeException("The errors' list has to be formatted like: [[sampleAerrorAxis1,sampleAerrorAxis2],[sampleBerrorAxis1,sampleBerrorAxis2]]")
+                except TypeError:
+                    if type(errors) == bool or isinstance(errors, (list,tuple)):
+                        self.show=[[True,True] for device in self.fileList]
+                    else:
+                        raise ListShapeException("The error's TypeError")
+                
+                self.labels=["Sample {:d}".format(m+1) for m in range(0,len(self.fileList))]
+            if show is not None:
+                try:
+                    if self.showCol == 0 or self.showCol2 == 0:
+                        temp=[show[m][0] for m in range(0,len(self.fileList))]
+                    else:
+                        temp=[show[m][1] for m in range(0,len(self.fileList))]
+                    self.show=show
+                except IndexError:
+                    raise ListShapeException("The show list has to be formatted like: [[sampleAshowAxis1,sampleAshowAxis2],[sampleBshowAxis1,sampleBshowAxis2]]")
+            if errors is not None:
+                if errors is False:
+                    self.errors=[[False,False] for device in self.fileList]
+                elif errors is True:
+                    self.errors=[[True,True] for device in self.fileList]
+                elif errors[0] is True and errors[1] is False:
+                    self.errors=[[True,False] for device in self.fileList]
+                elif errors[0] is False and errors[1] is True:
+                    self.errors=[[True,False] for device in self.fileList]
+            if fitLabels is None:
+                self.fitLabels=["Fit of "+label for label in self.labels]
+            else:
+                self.fitLabels=fitLabels
+            if isinstance(showLines,list):
+                self.showLines=showLines
+            else:
+                self.showLines=[[showLines,showLines] for device in self.fileList]
+            if isinstance(showMarkers,list):
+                self.showMarkers=showMarkers
+            else:
+                self.showMarkers=[[showMarkers,showMarkers] for device in self.fileList]    
     
     #fitTuple ([start, end], [show_start, show_end],func , (param1,param2), (textXPos,textYPos), desc, addKwArgs)
     def __initFitter(self):
@@ -646,55 +686,7 @@ class Plot():
                 else:
                     self.limit_fit_data_and_fit(fitter)
                     
-            
-            
-            
-     
-    def _scaleRcParams(self):
-        mpl.rcParams["lines.linewidth"]=self.scaleX*mpl.rcParams["lines.linewidth"]
-        mpl.rcParams["lines.markeredgewidth"]=self.scaleX*mpl.rcParams["lines.markeredgewidth"]
-        mpl.rcParams["lines.markersize"]=self.scaleX*mpl.rcParams["lines.markersize"]
-        mpl.rcParams['axes.linewidth'] = self.scaleX*mpl.rcParams["axes.linewidth"]
-        mpl.rcParams['xtick.major.size'] = self.scaleX*mpl.rcParams['xtick.major.size']
-        mpl.rcParams['xtick.major.width'] = self.scaleX*mpl.rcParams['xtick.major.width']
-        mpl.rcParams['xtick.major.pad'] = self.scaleX*mpl.rcParams['xtick.major.pad']
-        mpl.rcParams['xtick.minor.size'] = self.scaleX*mpl.rcParams['xtick.minor.size']
-        mpl.rcParams['xtick.minor.width'] = self.scaleX*mpl.rcParams['xtick.minor.width']
-        mpl.rcParams['xtick.minor.pad'] = self.scaleX*mpl.rcParams['xtick.minor.pad']
-        mpl.rcParams['ytick.major.size'] = self.scaleX*mpl.rcParams['ytick.major.size']
-        mpl.rcParams['ytick.major.width'] = self.scaleX*mpl.rcParams['ytick.major.width']
-        mpl.rcParams['ytick.major.pad'] = self.scaleX*mpl.rcParams['ytick.major.pad']
-        mpl.rcParams['ytick.minor.size'] = self.scaleX*mpl.rcParams['ytick.minor.size']
-        mpl.rcParams['ytick.minor.width'] = self.scaleX*mpl.rcParams['ytick.minor.width']
-        mpl.rcParams['ytick.minor.pad'] = self.scaleX*mpl.rcParams['ytick.minor.pad']
-        mpl.rcParams['grid.linewidth'] = self.scaleX*mpl.rcParams['grid.linewidth']
-        mpl.rcParams["pgf.preamble"] = "\\usepackage{amsmath}\n"+"\\usepackage{upgreek}\n"+"\\usepackage{lmodern}\n"+"\\usepackage{sfmath}\n"+f"\\renewcommand{{\\tfrac}}[2]{{\\genfrac{{}}{{}}{{{0.6*self.scaleX:0.3f}pt}}{{1}}{{#1}}{{#2}}}}"
-        
-        
-    def _rescaleRcParams(self):
-        mpl.rcParams["lines.linewidth"]=1/self.scaleX*mpl.rcParams["lines.linewidth"]
-        mpl.rcParams["lines.markeredgewidth"]=1/self.scaleX*mpl.rcParams["lines.markeredgewidth"]
-        mpl.rcParams["lines.markersize"]=1/self.scaleX*mpl.rcParams["lines.markersize"]
-        mpl.rcParams['axes.linewidth'] = 1/self.scaleX*mpl.rcParams["axes.linewidth"]
-        mpl.rcParams['xtick.major.size'] = 1/self.scaleX*mpl.rcParams['xtick.major.size']
-        mpl.rcParams['xtick.major.width'] = 1/self.scaleX*mpl.rcParams['xtick.major.width']
-        mpl.rcParams['xtick.major.pad'] = 1/self.scaleX*mpl.rcParams['xtick.major.pad']
-        mpl.rcParams['xtick.minor.size'] = 1/self.scaleX*mpl.rcParams['xtick.minor.size']
-        mpl.rcParams['xtick.minor.width'] = 1/self.scaleX*mpl.rcParams['xtick.minor.width']
-        mpl.rcParams['xtick.minor.pad'] = 1/self.scaleX*mpl.rcParams['xtick.minor.pad']
-        mpl.rcParams['ytick.major.size'] = 1/self.scaleX*mpl.rcParams['ytick.major.size']
-        mpl.rcParams['ytick.major.width'] = 1/self.scaleX*mpl.rcParams['ytick.major.width']
-        mpl.rcParams['ytick.major.pad'] = 1/self.scaleX*mpl.rcParams['ytick.major.pad']
-        mpl.rcParams['ytick.minor.size'] = 1/self.scaleX*mpl.rcParams['ytick.minor.size']
-        mpl.rcParams['ytick.minor.width'] = 1/self.scaleX*mpl.rcParams['ytick.minor.width']
-        mpl.rcParams['ytick.minor.pad'] = 1/self.scaleX*mpl.rcParams['ytick.minor.pad']
-        mpl.rcParams['grid.linewidth'] = 1/self.scaleX*mpl.rcParams['grid.linewidth']
-        mpl.rcParams["pgf.preamble"] = "\\usepackage{amsmath}\n"+"\\usepackage{upgreek}\n"+"\\usepackage{lmodern}\n"+"\\usepackage{sfmath}\n"+f"\\renewcommand{{\\tfrac}}[2]{{\\genfrac{{}}{{}}{{{0.6:0.3f}pt}}{{1}}{{#1}}{{#2}}}}"
 
-        
-    
-    
-    
     def saveFig(self):
         if self.useTex:
             self.fig.savefig(self.processFileName(option=".pdf"))#, bbox_inches='tight')
@@ -1108,7 +1100,7 @@ class Plot():
     def doPlot(self):
 
         if not self.no_plot:
-            self.fig, self.ax = self._newFig()
+            self.fig, self.ax = self.newFig()
             ax= self.ax
             xLabel=self.showColLabelUnit[self.xCol]
             ax.set_xlabel(xLabel, labelpad=self.labelpad)
@@ -1197,9 +1189,10 @@ class Plot():
             if self.xCol2 != 0:
                 axX2.set_xticklabels(self.xColTicksToXCol2Ticks(ax.get_xticks()))
             self.saveFig()
-            self._rescaleRcParams()
+            self.rescaleRcParams(self.scaleX)
             matplotlib.pyplot.close(self.fig)
         return [self,self.processFileName(option=".pdf")] #filename
+    
     
     def processAllAndExport(self, **kwargs):
         return self.exportAllData(**kwargs)
