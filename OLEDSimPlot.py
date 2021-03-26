@@ -175,10 +175,12 @@ class Stack:
         
     
     def plotStack(self, plot):
-        plot.fig, ax = plot._newFig()
+        plot.fig, ax = plot.newFig()
         import matplotlib.pyplot as plt
         ax.set_xlabel(plot.showColLabelUnit[plot.xCol])
         ax.set_ylabel(plot.showColLabelUnit[plot.showCol])
+        for label in ax.get_yticklabels():
+            label.set_fontproperties(plot.default_font)
         curPos=plot.initpos
         e=plot.e
         for m in self.Materials:
