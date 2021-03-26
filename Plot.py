@@ -45,7 +45,7 @@ class Plot():
         (23/255, 190/255, 207/255, 1),
         (248/255, 229/255, 32/255, 1),
         (44/255, 160/255, 44/255, 1)]
-    default_font="Latin Modern Sans"
+    default_font="DejaVu Sans"
     default_font_size=[10,10,6,6,6]
     axRect_default=[0.15,0.15,0.7,0.7]
     default_marker_size=6
@@ -125,7 +125,7 @@ class Plot():
         return con_filename
    
     @classmethod
-    def scaleRcParams(cls, scaleX):
+    def scaleRcParams(cls, scaleX, font=default_font):
         mpl.rcParams["lines.linewidth"]=scaleX*mpl.rcParams["lines.linewidth"]
         mpl.rcParams["lines.markeredgewidth"]=scaleX*mpl.rcParams["lines.markeredgewidth"]
         mpl.rcParams["lines.markersize"]=scaleX*mpl.rcParams["lines.markersize"]
@@ -143,10 +143,10 @@ class Plot():
         mpl.rcParams['ytick.minor.width'] = scaleX*mpl.rcParams['ytick.minor.width']
         mpl.rcParams['ytick.minor.pad'] = scaleX*mpl.rcParams['ytick.minor.pad']
         mpl.rcParams['grid.linewidth'] = scaleX*mpl.rcParams['grid.linewidth']
-        mpl.rcParams["pgf.preamble"] = "\\usepackage{amsmath}\n"+"\\usepackage{upgreek}\n"+"\\usepackage{lmodern}\n"+"\\usepackage{sfmath}\n"+f"\\renewcommand{{\\tfrac}}[2]{{\\genfrac{{}}{{}}{{{0.6*scaleX:0.3f}pt}}{{1}}{{#1}}{{#2}}}}"
+        mpl.rcParams["pgf.preamble"] = "\\usepackage{fontspec}\n"+f"\\setmainfont{{{font}}}"+"\\usepackage{amsmath}\n"+"\\usepackage{upgreek}\n"+"\\usepackage{sfmath}\n"+f"\\renewcommand{{\\tfrac}}[2]{{\\genfrac{{}}{{}}{{{0.6*scaleX:0.3f}pt}}{{1}}{{#1}}{{#2}}}}"
         
     @classmethod        
-    def rescaleRcParams(cls, scaleX):
+    def rescaleRcParams(cls, scaleX, font=default_font):
         mpl.rcParams["lines.linewidth"]=1/scaleX*mpl.rcParams["lines.linewidth"]
         mpl.rcParams["lines.markeredgewidth"]=1/scaleX*mpl.rcParams["lines.markeredgewidth"]
         mpl.rcParams["lines.markersize"]=1/scaleX*mpl.rcParams["lines.markersize"]
@@ -164,7 +164,7 @@ class Plot():
         mpl.rcParams['ytick.minor.width'] = 1/scaleX*mpl.rcParams['ytick.minor.width']
         mpl.rcParams['ytick.minor.pad'] = 1/scaleX*mpl.rcParams['ytick.minor.pad']
         mpl.rcParams['grid.linewidth'] = 1/scaleX*mpl.rcParams['grid.linewidth']
-        mpl.rcParams["pgf.preamble"] = "\\usepackage{amsmath}\n"+"\\usepackage{upgreek}\n"+"\\usepackage{lmodern}\n"+"\\usepackage{sfmath}\n"+f"\\renewcommand{{\\tfrac}}[2]{{\\genfrac{{}}{{}}{{{0.6:0.3f}pt}}{{1}}{{#1}}{{#2}}}}"
+        mpl.rcParams["pgf.preamble"] = "\\usepackage{fontspec}\n"+f"\\setmainfont{{{font}}}"+"\\usepackage{amsmath}\n"+"\\usepackage{upgreek}\n"+"\\usepackage{sfmath}\n"+f"\\renewcommand{{\\tfrac}}[2]{{\\genfrac{{}}{{}}{{{0.6:0.3f}pt}}{{1}}{{#1}}{{#2}}}}"
     
     @classmethod
     def set_size(w,h, ax=None):
@@ -193,7 +193,7 @@ class Plot():
     def newFig(cls, customFontsize=None, font=default_font, axRect=axRect_default, fig_width_pt=fig_width_default_pt, fixedFigWidth=False, scaleX=1, HWratio=1):
         matplotlib.pyplot.clf()
         cls.initTex(customFontsize=customFontsize, font=font)
-        fig = matplotlib.pyplot.figure(figsize=cls.figsize(fig_width_pt, fixedFigWidth, scaleX, HWratio))
+        fig = matplotlib.pyplot.figure(figsize=cls.figsize(fig_width_pt, fixedFigWidth, scaleX, HWratio), facecolor='none')
         ax=matplotlib.pyplot.axes(axRect)
         return fig, ax
 
@@ -215,13 +215,19 @@ class Plot():
                 "legend.fontsize": font_size[2],               # Make the legend/label fonts a little smaller
                 "xtick.labelsize": font_size[3],
                 "ytick.labelsize": font_size[4],
-                "text.usetex": True,    # use inline math for ticks
-                "axes.formatter.use_mathtext": True,
-                "pgf.rcfonts": False, 
-                "pgf.preamble": "\\usepackage{amsmath}\n"+
+                "text.usetex": False,    # use inline math for ticks
+                "axes.formatter.use_mathtext": False,
+                "pgf.rcfonts": True, 
+                "text.latex.preamble": "\\usepackage{amsmath}\n"+
                                 "\\usepackage{upgreek}\n"+
-                                "\\usepackage{lmodern}\n"+
                                 "\\usepackage{sfmath}\n"+
+                               f"\\renewcommand{{\\tfrac}}[2]{{\\genfrac{{}}{{}}{{{0.6*scaleX:0.3f}pt}}{{1}}{{#1}}{{#2}}}}",
+                "pgf.preamble": #"\\usepackage{amsmath}\n"+
+                                #"\\usepackage{upgreek}\n"+
+                                "\\usepackage{fontspec}\n"+
+                                f"\\setmainfont{{{font}}}"+
+                                f"\\setmathfont{{{font}}}"+
+                                #"\\usepackage{sfmath}\n"+
                                f"\\renewcommand{{\\tfrac}}[2]{{\\genfrac{{}}{{}}{{{0.6*scaleX:0.3f}pt}}{{1}}{{#1}}{{#2}}}}",
                 "lines.markersize": marker_size
             }
@@ -695,6 +701,7 @@ class Plot():
             self.fig.savefig(self.processFileName(option=".png"))
         if self.saveProps is not None:
             option=self.saveProps.pop("saveAs")
+            print(self.saveProps)
             self.fig.savefig(self.processFileName(option=option), **self.saveProps)
             
     def processFileName_makedirs(self):
@@ -1181,7 +1188,7 @@ class Plot():
                     labels += [l for l,index in zip(orig_labels,index_list) if not index]
                     handles += [h for h,index in zip(orig_handles,index_list) if not index]
             if self.legendBool:
-                leg=ax.legend(handles, labels, loc=self.legLoc, numpoints=1)
+                leg=ax.legend(handles, labels, loc=self.legLoc, numpoints=1, facecolor="none")
                 leg.get_frame().set_linewidth(self.legendEdgeSize)
             if self.titleBool:
                 ax.set_title(self.title, fontsize=self.titleFontsize)
