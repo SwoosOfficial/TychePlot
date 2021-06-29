@@ -48,6 +48,8 @@ class SpectraPlot(Plot):
     spectralRadiance_energy=5
     intensity_energype=7
     
+    spectral_data_format_default={"separator":"\t", "skiplines":40, "fileEnding":".txt", "codec":"iso-8859-1"}
+    
     @classmethod
     def wavelengthToEV(cls,wavelength,spectralRadiance):
         energy=wavelength**-1*cls.convFac #eV
@@ -122,13 +124,14 @@ class SpectraPlot(Plot):
     def __init__(self,
                  name,
                  fileList,
-                 fileFormat={"separator":";", "skiplines":75},
+                 fileFormat=spectral_data_format_default,
                  title=None,
                  validYCol=[2],
                  bgYCol=[None],
                  showColAxType=["lin","lin","lin","lin","lin","lin","lin"],
                  showColAxLim=[None,None,None,None,None,None,None],
                  showColLabel= ["","Wavelength","Normalised Intensity", "Spectral Radiance", "Energy", "Normalised Intensity", "reduced Intensity"],
+                 showColLabel_filename= ["","Wavelength","Normalised Intensity", "Spectral Radiance", "Energy", "Normalised Intensity", "reduced Intensity"],
                  showColLabelUnit=["",
                   "Wavelength (nm)",
                   "Normalised Intensity",
@@ -154,7 +157,7 @@ class SpectraPlot(Plot):
                 ):
         if rainbowMode:
             kwargs.update({"legendBool":False})
-        Plot.__init__(self, name, fileList, averageMedian=averageMedian, showColAxType=showColAxType, showColAxLim=showColAxLim, showColLabel=showColLabel, showColLabelUnit=showColLabelUnit, fileFormat=fileFormat, errors=errors, fitColors=fitColors, partialFitLabels=["Partial mono-Gaussian fit"], **kwargs)
+        Plot.__init__(self, name, fileList, averageMedian=averageMedian, showColAxType=showColAxType, showColAxLim=showColAxLim, showColLabel=showColLabel, showColLabel_filename=showColLabel_filename ,showColLabelUnit=showColLabelUnit, fileFormat=fileFormat, errors=errors, fitColors=fitColors, partialFitLabels=["Partial mono-Gaussian fit"], **kwargs)
         #dyn inits
         if title is None:
             self.title=name
@@ -181,9 +184,9 @@ class SpectraPlot(Plot):
         else:
             string=self.filename    
         if self.xCol == SpectraPlot.wavelength:
-            string+=self.fill+self.showColLabel[self.showCol].replace(" ","")
+            string+=self.fill+self.showColLabel_filename[self.showCol].replace(" ","")
         else:
-            string+=self.fill+self.showColLabel[self.showCol].replace(" ","")+"vs"+self.showColLabel[self.xCol].replace(" ","") 
+            string+=self.fill+self.showColLabel_filename[self.showCol].replace(" ","")+"vs"+self.showColLabel_filename[self.xCol].replace(" ","") 
         if not self.scaleX == 1:
             string+=self.fill+"scaledWith{:03.0f}Pct".format(self.scaleX*100)
         if self.filenamePrefix is not None:
@@ -225,8 +228,8 @@ class SpectraPlot(Plot):
         data.processData(self.noNegatives, yCol=3)
         data.processData(self.noNegatives, yCol=5)
         data.processData(self.noNegatives, yCol=6)
-        self.process_normalization(data)
         data.limitData(xLim=self.xLimOrig)
+        self.process_normalization(data)
         self.dataProcessed=True
         return
     
