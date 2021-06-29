@@ -22,6 +22,7 @@ from Filereader import fileToNpArray
 from Data import Data
 from Fitter import Fitter
 from Plot import Plot
+from SpectraPlot import SpectraPlot
 
 
 # In[2]:
@@ -52,7 +53,7 @@ class OLEDPlot(Plot):
     
     #defaults
     jvl_file_format_default={"separator":"\t", "skiplines":1, "fileEnding":".uil"}
-    spectral_data_format_default={"separator":";", "skiplines":75, "fileEnding":".csv"}
+    spectral_data_format_default={"separator":"\t", "skiplines":40, "fileEnding":".txt", "codec":"iso-8859-1"}
     pixels_default_qty=4
     
     @classmethod
@@ -86,8 +87,8 @@ class OLEDPlot(Plot):
     @classmethod
     def doubleLogSlope(cls, volt, dens, V_bi=0):
         oldDict=np.seterr(all="ignore")
-        V=np.log(volt-V_bi)
-        j=np.log(dens)
+        V=np.log(np.abs(volt-V_bi))
+        j=np.log(np.abs(dens))
         deriv=np.gradient(j,V)
         np.seterr(**oldDict)
         return deriv
@@ -96,7 +97,7 @@ class OLEDPlot(Plot):
     def semiLogSlope(cls, volt, dens):
         oldDict=np.seterr(all="ignore")
         j=np.log(dens)
-        deriv=np.gradient(j,volt)
+        deriv=np.gradient(j,V)
         np.seterr(**oldDict)
         return deriv
     
@@ -202,6 +203,7 @@ class OLEDPlot(Plot):
                  showColAxType=["lin","lin","log","log","log","log","lin","lin","lin","lin"],
                  showColAxLim=[None,None,None,None,None,None,None,None,None,None],
                  showColLabel= ["","Voltage","Current","Current Density", "Luminance", "Radiance","Current Efficiency","Luminous Efficacy","EQE", "Exponent"],
+                 showColLabel_fileName= ["","Voltage","Current","Current Density", "Luminance", "Radiance","Current Efficiency","Luminous Efficacy","EQE", "Exponent"],
                  showColLabelUnitNoTex=["",
                   "Voltage (V)",
                   "Current (A)",
@@ -250,6 +252,7 @@ class OLEDPlot(Plot):
         self.noSweepBackMeasured=noSweepBackMeasured
         Plot.__init__(self, name, fileList, averageMedian=averageMedian, showColAxType=showColAxType, showColAxLim=showColAxLim, showColLabel=showColLabel, showColLabelUnit=showColLabelUnit, showColLabelUnitNoTex=showColLabelUnitNoTex,fileFormat=fileFormat, legLoc=legLoc, **kwargs)
         #dyn inits
+        self.showColLabel_fileName=showColLabel_fileName
         self.pixelsize_mm2=pixelsize_mm2
         self.diodYCol=diodYCol
         self.spectraRange=spectraRange
@@ -300,6 +303,7 @@ class OLEDPlot(Plot):
         diodeFuncData=Data(fileToNpArray(self.photodiodeFunctionFile, **self.diodeDataFormat)[0])
         diodeFuncData.processData(Plot.normalize2, yCol=self.diodYCol)
         spectralDataList=[]
+        lum_interpolator=SpectraPlot.lum_interpolator
         for spectraFileTup in self.spectraFiles:
             if type(spectraFileTup) == tuple or type(spectraFileTup) == list:
                 spectraFile=spectraFileTup[0]
@@ -309,8 +313,10 @@ class OLEDPlot(Plot):
                 yCol=self.specYCol
             try:
                 spectralData=Data(fileToNpArray(spectraFile, **self.spectralDataFormat)[0])
-                xData=spectralData.getSplitData2D()[0]
-                yData=spectralData.getSplitData2D(yCol=yCol)[1]
+                lum_func=lum_interpolator(spectralData.getSplitData2D(yCol=yCol))
+                #spectralData.limitData(xLim=[self.spectraRange[0],self.spectraRange[1]])
+                xData=np.arange(self.spectraRange[0],self.spectraRange[1])
+                yData=lum_func(xData)
             except FileNotFoundError:
                 warnings.warn(f"SpectraFile {spectraFile} Not Found, Radiance and EQE will be wrong!")
                 spectralData=diodeFuncData
@@ -323,10 +329,12 @@ class OLEDPlot(Plot):
                 yData=spectralData.getSplitData2D()[1]
             try:
                 if self.spec_bg_file is None:
-                    bgData=spectralData.getSplitData2D(yCol=bg)[1]
+                    bg_func=lum_interpolator(spectralData.getSplitData2D(yCol=bg))
                 else:
-                    bgData=Data(fileToNpArray(spectraFile, **self.spectralDataFormat)[0]).getSplitData2D()[1]
-                yDataCor=spectralData.getSplitData2D(yCol=yCol)[1]-bgData
+                    bg_func=lum_interpolator(Data(fileToNpArray(spectraFile, **self.spectralDataFormat)[0]).getSplitData2D())
+                xData=np.arange(self.spectraRange[0],self.spectraRange[1])
+                bgData=bg_func(xData)
+                yDataCor=yData-bgData
                 spectralData.setData(Data.mergeData((xData,yData,bgData,yDataCor)))
                 spectralData.processData(OLEDPlot.absolute, yCol=2)
                 spectralData.processData(OLEDPlot.absolute, yCol=4)
@@ -336,11 +344,11 @@ class OLEDPlot(Plot):
                 spectralData.setData(Data.mergeData((xData,yData)))
                 spectralData.processData(OLEDPlot.absolute, yCol=2)
                 spectralData.processData(OLEDPlot.normalize, yCol=2)
-            Plot.equalizeRanges(spectralData)
+            Plot.equalizeRanges(spectralData, norm=self.spectraRange)
             spectralDataList.append(spectralData)
         if len(spectralDataList) == 1:
             spectralDataList=spectralDataList*self.samples
-        Plot.equalizeRanges(diodeFuncData)
+        Plot.equalizeRanges(diodeFuncData, norm=self.spectraRange)
         return spectralDataList, diodeFuncData
     
     def remDarkCurr(self,phot):
@@ -450,14 +458,14 @@ class OLEDPlot(Plot):
             string=self.filename
         if self.showCol2 == 0:
             if self.xCol == OLEDPlot.Voltage:
-                string+=self.name.replace(" ","")+self.fill+"OLED_"+self.showColLabel[self.showCol].replace(" ","")
+                string+=self.name.replace(" ","")+self.fill+"OLED_"+self.showColLabel_fileName[self.showCol].replace(" ","")
             else:
-                string+=self.name.replace(" ","")+self.fill+"OLED_"+self.showColLabel[self.showCol].replace(" ","")+"vs"+self.showColLabel[self.xCol].replace(" ","")    
+                string+=self.name.replace(" ","")+self.fill+"OLED_"+self.showColLabel_fileName[self.showCol].replace(" ","")+"vs"+self.showColLabel_fileName[self.xCol].replace(" ","")    
         else:
             if self.xCol == OLEDPlot.Voltage:
-                string+=self.name.replace(" ","")+self.fill+"OLED_"+self.showColLabel[self.showCol].replace(" ","")+"+"+self.showColLabel[self.showCol2].replace(" ","")
+                string+=self.name.replace(" ","")+self.fill+"OLED_"+self.showColLabel_fileName[self.showCol].replace(" ","")+"+"+self.showColLabel_fileName[self.showCol2].replace(" ","")
             else:
-                string+=self.name.replace(" ","")+self.fill+"OLED_"+self.showColLabel[self.showCol].replace(" ","")+"+"+self.showColLabel[self.showCol2].replace(" ","")+"vs"+self.showColLabel[self.xCol].replace(" ","")
+                string+=self.name.replace(" ","")+self.fill+"OLED_"+self.showColLabel_fileName[self.showCol].replace(" ","")+"+"+self.showColLabel_fileName[self.showCol2].replace(" ","")+"vs"+self.self.showColLabel_fileName[self.xCol].replace(" ","")
         
         if not self.skipSweepBack:
             string+=self.fill+"withSweepback"
