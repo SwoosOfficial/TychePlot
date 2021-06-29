@@ -20,11 +20,12 @@ def fileToNpArray(filename,
                   transpose=False, 
                   ignoreRowCol=None,
                   unitConversionFactors=[1,1],
-                  debug=False):
+                  debug=False,
+                  codec="utf-8"):
     if fileEnding is None:
-        file = open(filename,"r")
+        file = open(filename,"r", encoding=codec)
     else:
-        file = open(filename+fileEnding,"r")
+        file = open(filename+fileEnding,"r",encoding=codec)
     lines = file.readlines()
     if lastlines != 0:
         lines = lines[:-lastlines]
@@ -63,8 +64,8 @@ def fileToNpArray(filename,
             for n in preArray:
                 for a,b in zip(exceptColumns, range(0,len(exceptColumns))):
                     del n[a-b]
-        #if debug:
-            #print(preArray)
+        if debug:
+            print(preArray)
         fileToNpArray.array = np.asarray(preArray, dtype=np.float64)
         if transpose:
             fileToNpArray.array=np.transpose(fileToNpArray.array)
