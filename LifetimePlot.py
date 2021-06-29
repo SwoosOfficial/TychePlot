@@ -80,7 +80,6 @@ class LifetimePlot(Plot):
                  ],
                  averageMedian=False,
                  errors=False,
-                 rainbowMode=False,
                  fitColors=['#000000','#1f77b4','#d62728','#2ca02c','#9467bd','#8c564b','#e377c2','#7f7f7f','#ff7f0e','#bcbd22','#17becf','#f8e520'],
                  bgfile=None,
                  normalize_peak=True,
@@ -96,7 +95,6 @@ class LifetimePlot(Plot):
         else:
             self.title=title
         self.validYCol=validYCol
-        self.rainbowMode=rainbowMode
         self.bgfile=bgfile
         self.normalize_peak=normalize_peak
         self.set_peak_to_zero=set_peak_to_zero
@@ -120,7 +118,7 @@ class LifetimePlot(Plot):
         return string+option
     
     def processData(self):
-        yCol= self.validYCol
+        yCol_l= self.validYCol
         if not self.dataProcessed:
             if self.bgfile is not None:
                 bg=fileToNpArray(self.bgfile, **self.fileFormat)[0][:,1]
@@ -128,15 +126,24 @@ class LifetimePlot(Plot):
                 bg = 0
             for device in self.dataList:
                 for data in device:
-                    time,intens= data.getSplitData2D(xCol=1, yCol=yCol)[0], data.getSplitData2D(xCol=1,yCol=yCol)[1]-bg
-                    #data.setData(Data.mergeData((time, intens, intens)))
-                    data.processData(self.noNegatives, yCol=2)
-                    if self.normalize:
-                        data.processData(self.normalize, yCol=2)
-                    if self.set_peak_to_zero:
-                        max_value=np.amax(intens)    
-                        indices = np.where(intens == max_value)
-                        data.processData(self.shift, x=True, y=False, index=indices[0][0])
+                    if not isinstance(yCol_l, list):
+                        yCol_l=[yCol_l]
+                    if not isinstance(self.normalize_peak, list):
+                        self.normalize_peak=[self.normalize_peak]
+                    if not isinstance(self.set_peak_to_zero, list):
+                        self.set_peak_to_zero=[self.set_peak_to_zero]
+                    done=False
+                    for yCol,normalize_peak,set_peak_to_zero in zip(yCol_l,self.normalize_peak,self.set_peak_to_zero):
+                        time,intens= data.getSplitData2D(xCol=1, yCol=yCol)[0], data.getSplitData2D(xCol=1,yCol=yCol)[1]-bg
+                        #data.setData(Data.mergeData((time, intens, intens)))
+                        data.processData(self.noNegatives, yCol=yCol)
+                        if normalize_peak:
+                            data.processData(self.normalize, yCol=yCol)
+                        if set_peak_to_zero and not done:
+                            max_value=np.amax(intens)    
+                            indices = np.where(intens == max_value)
+                            data.processData(self.shift, x=True, y=False, index=indices[0][0])
+                            done=True
                     data.limitData(xLim=self.xLimOrig)        
                 self.dataProcessed=True 
             return self.dataList
