@@ -143,7 +143,9 @@ class Plot():
         mpl.rcParams['ytick.minor.width'] = scaleX*mpl.rcParams['ytick.minor.width']
         mpl.rcParams['ytick.minor.pad'] = scaleX*mpl.rcParams['ytick.minor.pad']
         mpl.rcParams['grid.linewidth'] = scaleX*mpl.rcParams['grid.linewidth']
-        mpl.rcParams["pgf.preamble"] = "\\usepackage{fontspec}\n"+f"\\setmainfont{{{font}}}"+"\\usepackage{amsmath}\n"+"\\usepackage{upgreek}\n"+"\\usepackage{sfmath}\n"+f"\\renewcommand{{\\tfrac}}[2]{{\\genfrac{{}}{{}}{{{0.6*scaleX:0.3f}pt}}{{1}}{{#1}}{{#2}}}}"
+        mpl.rcParams["pgf.preamble"] = "\\usepackage{fontspec}\n"+"\\usepackage{unicode-math}\n"+f"\\setmainfont{{{font}}}"+f"\\setmathfont{{{font}}}"+"\\usepackage{amsmath}\n"+"\\usepackage{upgreek}\n"+f"\\renewcommand{{\\tfrac}}[2]{{\\genfrac{{}}{{}}{{{0.6*scaleX:0.3f}pt}}{{1}}{{#1}}{{#2}}}}"
+        #"\\usepackage{sfmath}\n"+
+
         
     @classmethod        
     def rescaleRcParams(cls, scaleX, font=default_font):
@@ -164,7 +166,7 @@ class Plot():
         mpl.rcParams['ytick.minor.width'] = 1/scaleX*mpl.rcParams['ytick.minor.width']
         mpl.rcParams['ytick.minor.pad'] = 1/scaleX*mpl.rcParams['ytick.minor.pad']
         mpl.rcParams['grid.linewidth'] = 1/scaleX*mpl.rcParams['grid.linewidth']
-        mpl.rcParams["pgf.preamble"] = "\\usepackage{fontspec}\n"+f"\\setmainfont{{{font}}}"+"\\usepackage{amsmath}\n"+"\\usepackage{upgreek}\n"+"\\usepackage{sfmath}\n"+f"\\renewcommand{{\\tfrac}}[2]{{\\genfrac{{}}{{}}{{{0.6:0.3f}pt}}{{1}}{{#1}}{{#2}}}}"
+        mpl.rcParams["pgf.preamble"] = "\\usepackage{fontspec}\n"+"\\usepackage{unicode-math}\n"+f"\\setmainfont{{{font}}}"+f"\\setmathfont{{{font}}}"+"\\usepackage{amsmath}\n"+"\\usepackage{upgreek}\n"+f"\\renewcommand{{\\tfrac}}[2]{{\\genfrac{{}}{{}}{{{0.6:0.3f}pt}}{{1}}{{#1}}{{#2}}}}"
     
     @classmethod
     def set_size(w,h, ax=None):
@@ -218,13 +220,18 @@ class Plot():
                 "text.usetex": False,    # use inline math for ticks
                 "axes.formatter.use_mathtext": False,
                 "pgf.rcfonts": True, 
-                "text.latex.preamble": "\\usepackage{amsmath}\n"+
+                "text.latex.preamble": "\\usepackage{fontspec}\n"+
+                                "\\usepackage{unicode-math}\n"+
+                                f"\\setmainfont{{{font}}}"+
+                                f"\\setmathfont{{{font}}}"+
+                                "\\usepackage{amsmath}\n"+
                                 "\\usepackage{upgreek}\n"+
-                                "\\usepackage{sfmath}\n"+
+                                #"\\usepackage{sfmath}\n"+
                                f"\\renewcommand{{\\tfrac}}[2]{{\\genfrac{{}}{{}}{{{0.6*scaleX:0.3f}pt}}{{1}}{{#1}}{{#2}}}}",
                 "pgf.preamble": #"\\usepackage{amsmath}\n"+
                                 #"\\usepackage{upgreek}\n"+
                                 "\\usepackage{fontspec}\n"+
+                                "\\usepackage{unicode-math}\n"+
                                 f"\\setmainfont{{{font}}}"+
                                 f"\\setmathfont{{{font}}}"+
                                 #"\\usepackage{sfmath}\n"+
@@ -285,6 +292,7 @@ class Plot():
                  iterMarkers=False,
                  #markerOffset=0,
                  showColLabel=None,
+                 showColLabel_filename=None,
                  showColLabelUnitNoTex=[None,"X","Y","Y2"],
                  showColLabelUnit=[None,"X","Y","Y2"],
                  fill="_",
@@ -380,10 +388,15 @@ class Plot():
             try:
                 sCLU[0]="?"
                 self.showColLabel=[showColLabelUnitElement.split()[0] for showColLabelUnitElement in sCLU]
+                self.showColLabel_filename=self.showColLabel
             except:
                 raise
         else:
             self.showColLabel=showColLabel
+            if showColLabel_filename is None:
+                self.showColLabel_filename=showColLabel
+            else:
+                self.showColLabel_filename=showColLabel_filename
         self.useTex=useTex
         if self.useTex:
             #mpl.use("pgf")
@@ -701,7 +714,6 @@ class Plot():
             self.fig.savefig(self.processFileName(option=".png"))
         if self.saveProps is not None:
             option=self.saveProps.pop("saveAs")
-            print(self.saveProps)
             self.fig.savefig(self.processFileName(option=option), **self.saveProps)
             
     def processFileName_makedirs(self):
@@ -721,11 +733,11 @@ class Plot():
         string=""
         if self.filename is None:
             if self.showCol2 == 0:
-                string+=self.name.replace(" ","")+self.fill+self.showColLabel[self.showCol].replace(" ","")
+                string+=self.name.replace(" ","")+self.fill+self.showColLabel_filename[self.showCol].replace(" ","")
             else:
-                string+=self.name.replace(" ","")+self.fill+self.showColLabel[self.showCol].replace(" ","")+"+"+self.showColLabel[self.showCol2].replace(" ","")
+                string+=self.name.replace(" ","")+self.fill+self.showColLabel_filename[self.showCol].replace(" ","")+"+"+self.showColLabel_filename[self.showCol2].replace(" ","")
         else:
-            string=self.filename.replace(" ","")+self.fill+self.showColLabel[self.showCol].replace(" ","")
+            string=self.filename.replace(" ","")+self.fill+self.showColLabel_filename[self.showCol].replace(" ","")
         if self.scaleX != 1:
             string+=self.fill+"scaledWith{:03.0f}Pct".format(self.scaleX*100)
         if self.filenamePrefix is not None:
@@ -1107,7 +1119,14 @@ class Plot():
     def doPlot(self):
 
         if not self.no_plot:
-            self.fig, self.ax = self.newFig()
+            self.fig, self.ax = self.newFig(customFontsize=self.customFontsize,
+                                            font=self.font,
+                                            axRect=self.axRect, 
+                                            fig_width_pt=self.fig_width_pt, 
+                                            fixedFigWidth=self.fixedFigWidth, 
+                                            scaleX=self.scaleX, 
+                                            HWratio=self.HWratio
+                                           )
             ax= self.ax
             xLabel=self.showColLabelUnit[self.xCol]
             ax.set_xlabel(xLabel, labelpad=self.labelpad)
