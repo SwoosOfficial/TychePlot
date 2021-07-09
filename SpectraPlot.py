@@ -10,6 +10,7 @@ import matplotlib.pyplot
 import numpy as np
 import scipy as sci
 import scipy.interpolate as inter
+from scipy.signal import savgol_filter
 import copy
 import sys
 import os
@@ -153,6 +154,7 @@ class SpectraPlot(Plot):
                  ticklabelformat="plain",
                  rb_pos=-0.035,
                  rb_h=0.01,
+                 _filter=None,
                  **kwargs
                 ):
         if rainbowMode:
@@ -176,6 +178,7 @@ class SpectraPlot(Plot):
         self.ticklabelformat=ticklabelformat
         self.rb_pos=rb_pos
         self.rb_h=rb_h
+        self._filter=_filter
         #self.dataList=self.importData()
    
     def processFileName(self, option=".pdf"):
@@ -212,6 +215,17 @@ class SpectraPlot(Plot):
             self.postprocess_normalization=True
         else:
             return
+        
+    def filter_data(self, data):
+        try:
+            if self._filter["type"] == 'savgol':
+                def this_savgol_filter(data):
+                    return savgol_filter(data, self._filter["p1"], self._filter["p2"])
+                data.processData(this_savgol_filter, yCol=2)
+                data.processData(this_savgol_filter, yCol=5)
+                data.processData(this_savgol_filter, yCol=6)
+        except:
+            return
     
     def __sub_processData(self, data, yCol, backg=None):
         try:
@@ -230,6 +244,8 @@ class SpectraPlot(Plot):
         data.processData(self.noNegatives, yCol=6)
         data.limitData(xLim=self.xLimOrig)
         self.process_normalization(data)
+        if self._filter != None:
+            self.filter_data(data)
         self.dataProcessed=True
         return
     
