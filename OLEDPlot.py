@@ -244,6 +244,7 @@ class OLEDPlot(Plot):
                  sweepOverride=None,
                  invertedDevice=False,
                  noVLFilter=False,
+                 volt_zero_thresh=10**-6,
                  **kwargs
                 ):
         self.sweepOverride=sweepOverride
@@ -286,6 +287,7 @@ class OLEDPlot(Plot):
         self.lumThresh=lumThresh
         self.invertedDevice=invertedDevice
         self.noVLFilter=noVLFilter
+        self.volt_zero_thresh=volt_zero_thresh
         #initmethods
         self.exportDataList=copy.deepcopy(self.dataList)
         self.spectralDataList=self.spectraDataImport()[0]
@@ -357,6 +359,18 @@ class OLEDPlot(Plot):
         else:
             a= phot-self.darkCurrent
         return np.maximum(a*0+10**-14,np.absolute(a))
+    
+    def remZeroCurr_func(self, data):
+        volt,curr = data.getSplitData2D(xCol=1, yCol=2)
+        for voltage,current in zip(volt,curr):
+            if abs(voltage) < self.volt_zero_thresh:
+                def remZeroCurr(curr):
+                    return curr - current
+                return remZeroCurr
+        def remZeroCurr(curr):
+            return curr
+        return remZeroCurr
+        
     
     def radToCandela(self, rad, spectralData):
         summe=np.sum([self.diodeData.getSplitData2D()[1][a]*spectralData.getSplitData2D()[1][a] for a in range(0,len(self.diodeData.getSplitData2D()[1]))])
@@ -493,6 +507,7 @@ class OLEDPlot(Plot):
         for data in deviceData:
             data.limitData(xLim=self.xLimOrig, xCol=self.xColOrig)
             data.processData(self.remDarkCurr, yCol=3)
+            data.processData(self.remZeroCurr_func(data), yCol=2)
             data.processData(OLEDPlot.absolute, yCol=2)
             data.processData(OLEDPlot.removeZeros, yCol=2)
             
