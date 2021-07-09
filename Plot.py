@@ -358,6 +358,7 @@ class Plot():
                  axRect=axRect_default,
                  labelPad=None,
                  saveProps=None,
+                 axAnnotations=None,
                  #ax_aspect='auto',
                 ):
         #static inits
@@ -538,6 +539,7 @@ class Plot():
         self.axRect=axRect
         self.labelpad=labelPad
         self.saveProps=saveProps
+        self.axAnnotations=axAnnotations
         #self.ax_aspect=ax_aspect
         #inits
         #if mpl_use == "pgf":
@@ -742,7 +744,10 @@ class Plot():
             string+=self.fill+"scaledWith{:03.0f}Pct".format(self.scaleX*100)
         if self.filenamePrefix is not None:
             self.processFileName_makedirs()
-            string=self.filenamePrefix+self.fill+string
+            if self.filenamePrefix[-1] == os.sep:
+                string=self.filenamePrefix+string
+            else:
+                string=self.filenamePrefix+self.fill+string
         return string+option
         
     def makeDataFromFile(self, measurement, fileFormat, lower_crop=0, upper_crop=0):
@@ -959,6 +964,18 @@ class Plot():
     
     def afterPlot(self):
         return
+    
+    def handleAxAnnotations(self):
+        if self.axAnnotations is not None:
+            if self.axAnnotations["ax1"] is not None:
+                ax1_ann=self.axAnnotations["ax1"]
+                self.ax.plot(*ax1_ann["circle_pos"], **ax1_ann["circle_kwargs"])
+                self.ax.annotate('', **ax1_ann["arr_kwargs"])
+            if self.axAnnotations["ax2"] is not None:
+                ax2_ann=self.axAnnotations["ax2"]
+                self.ax2.plot(*ax2_ann["circle_pos"], **ax2_ann["circle_kwargs"])
+                self.ax2.annotate('', **ax2_ann["arr_kwargs"])
+           
     
     def processPlotSub(self, n, ls, mk, fs, ax2ls, ax2mk, ax2fs, ax1color, ax2color, data):
         colors=self.colors
@@ -1187,6 +1204,7 @@ class Plot():
             #BEGIN: WARNING DANGEROUS!!!
             exec(self.injCode)
             #END: WARNING DANGEROUS!!!
+            self.handleAxAnnotations()
             self.afterPlot()
             handles, labels=ax.get_legend_handles_labels()
             handles = [h[0] for h in handles]
