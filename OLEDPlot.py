@@ -204,7 +204,7 @@ class OLEDPlot(Plot):
                  showColAxLim=[None,None,None,None,None,None,None,None,None,None],
                  showColLabel= ["","Voltage","Current","Current Density", "Luminance", "Radiance","Current Efficiency","Luminous Efficacy","EQE", "Exponent"],
                  showColLabel_fileName= ["","Voltage","Current","Current Density", "Luminance", "Radiance","Current Efficiency","Luminous Efficacy","EQE", "Exponent"],
-                 showColLabelUnitNoTex=["",
+                 showColLabelUnit=["",
                   "Voltage (V)",
                   "Current (A)",
                   "Current Density (mA/cm²)",
@@ -215,7 +215,7 @@ class OLEDPlot(Plot):
                   "EQE (%)",
                   "Exponent"
                  ],
-                 showColLabelUnit=["",
+                 showColLabelUnitNoTex=["",
                   "Voltage (V)",
                   "Current (A)",
                   "Current Density ($\\tfrac{\\mathsf{mA}}{\\mathsf{cm}^\\mathsf{2}}$)",
