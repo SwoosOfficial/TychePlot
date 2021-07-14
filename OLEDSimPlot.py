@@ -98,6 +98,7 @@ class OLEDSimPlot(Plot):
         else:
             self.E=E
         self.stack=Stack(self.materials, self.colors, self.colorsMetal)
+        self.initTex()
         
         
     def doPlot(self):
