@@ -1207,7 +1207,14 @@ class Plot():
             self.handleAxAnnotations()
             self.afterPlot()
             handles, labels=ax.get_legend_handles_labels()
-            handles = [h[0] for h in handles]
+            handles_temp=[]
+            for h in handles:
+                try:
+                    handles_temp.append(h[0])
+                except TypeError:
+                    handles_temp.append(h)
+            handles=handles_temp
+            #handles = [h[0] for h in handles]
             #labels = labels[0:self.devices]
             if True in [a[1] for a in self.show] and self.ax2Labels and self.showCol2 != 0:
                 handles2, labels2=ax2.get_legend_handles_labels()
