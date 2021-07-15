@@ -5,6 +5,9 @@
 
 import numpy as np
 
+def comma_str_to_float(string):
+    floatable_string=string.replace(",",".")
+    return float(floatable_string)
 
 # In[5]:
 
@@ -59,6 +62,7 @@ def fileToNpArray(filename,
                 line=[a.replace(",",".") for a in line]
             preArray.append(line)
         if ignoreRowCol is not None:
+            descList.append(preArray[ignoreRowCol[0]][ignoreRowCol[1]])
             preArray[ignoreRowCol[0]][ignoreRowCol[1]]=0.0
         if (len(exceptColumns)!=0):
             for n in preArray:
