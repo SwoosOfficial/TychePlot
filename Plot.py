@@ -49,6 +49,11 @@ class Plot():
     default_font_size=[10,10,6,6,6]
     axRect_default=[0.15,0.15,0.7,0.7]
     default_marker_size=6
+    default_D3props={
+        "func":"contourf",
+        "interp":1000,
+        "cmap":"afmhot"
+    }
     
     @classmethod
     def gauss(cls, x, mu, amp, sigma):
@@ -192,9 +197,9 @@ class Plot():
         return fig_size
 
     @classmethod
-    def newFig(cls, customFontsize=None, font=default_font, axRect=axRect_default, fig_width_pt=fig_width_default_pt, fixedFigWidth=False, scaleX=1, HWratio=1):
+    def newFig(cls, customFontsize=None, font=default_font, axRect=axRect_default, fig_width_pt=fig_width_default_pt, fixedFigWidth=False, scaleX=1, HWratio=1, marker_size=default_marker_size):
         matplotlib.pyplot.clf()
-        cls.initTex(customFontsize=customFontsize, font=font)
+        cls.initTex(customFontsize=customFontsize, font=font, marker_size=marker_size)
         fig = matplotlib.pyplot.figure(figsize=cls.figsize(fig_width_pt, fixedFigWidth, scaleX, HWratio), facecolor='none')
         ax=matplotlib.pyplot.axes(axRect)
         return fig, ax
@@ -221,17 +226,17 @@ class Plot():
                 "axes.formatter.use_mathtext": False,
                 "pgf.rcfonts": True, 
                 "text.latex.preamble": "\\usepackage{fontspec}\n"+
-                                "\\usepackage{unicode-math}\n"+
+                                #"\\usepackage{unicode-math}\n"+
                                 f"\\setmainfont{{{font}}}"+
                                 f"\\setmathfont{{{font}}}"+
-                                "\\usepackage{amsmath}\n"+
-                                "\\usepackage{upgreek}\n"+
+                                #"\\usepackage{amsmath}\n"+
+                                #"\\usepackage{upgreek}\n"+
                                 #"\\usepackage{sfmath}\n"+
                                f"\\renewcommand{{\\tfrac}}[2]{{\\genfrac{{}}{{}}{{{0.6*scaleX:0.3f}pt}}{{1}}{{#1}}{{#2}}}}",
                 "pgf.preamble": #"\\usepackage{amsmath}\n"+
                                 #"\\usepackage{upgreek}\n"+
                                 "\\usepackage{fontspec}\n"+
-                                "\\usepackage{unicode-math}\n"+
+                                #"\\usepackage{unicode-math}\n"+
                                 f"\\setmainfont{{{font}}}"+
                                 f"\\setmathfont{{{font}}}"+
                                 #"\\usepackage{sfmath}\n"+
@@ -359,6 +364,7 @@ class Plot():
                  labelPad=None,
                  saveProps=None,
                  axAnnotations=None,
+                 D3props=default_D3props,
                  #ax_aspect='auto',
                 ):
         #static inits
@@ -540,6 +546,7 @@ class Plot():
         self.labelpad=labelPad
         self.saveProps=saveProps
         self.axAnnotations=axAnnotations
+        self.D3props=D3props
         #self.ax_aspect=ax_aspect
         #inits
         #if mpl_use == "pgf":
@@ -1133,6 +1140,21 @@ class Plot():
                 ax2mk[n]=ax2markers[n]
             self.processPlotSub(n, ls, mk, fillstyles, ax2ls, ax2mk, ax2fillstyles, ax1color, ax2color, expectData)
 
+            
+    def process3DPlot(self):
+        labels=self.labels
+        xCol=self.xCol
+        showCol=self.showCol
+        colorOffset=self.colorOffset
+        ax=self.ax
+        D3props=self.D3props
+        if D3props["func"] == "contourf":
+            data=dataList[self.showCol][0]
+            
+            ax.contourf()
+        
+            
+            
     def doPlot(self):
 
         if not self.no_plot:
@@ -1142,7 +1164,8 @@ class Plot():
                                             fig_width_pt=self.fig_width_pt, 
                                             fixedFigWidth=self.fixedFigWidth, 
                                             scaleX=self.scaleX, 
-                                            HWratio=self.HWratio
+                                            HWratio=self.HWratio,
+                                            marker_size=self.markerSize
                                            )
             ax= self.ax
             xLabel=self.showColLabelUnit[self.xCol]
@@ -1231,6 +1254,74 @@ class Plot():
                 if self.showFitInLegend:
                     labels += [l for l,index in zip(orig_labels,index_list) if not index]
                     handles += [h for h,index in zip(orig_handles,index_list) if not index]
+            if self.legendBool:
+                leg=ax.legend(handles, labels, loc=self.legLoc, numpoints=1, facecolor="none")
+                leg.get_frame().set_linewidth(self.legendEdgeSize)
+            if self.titleBool:
+                ax.set_title(self.title, fontsize=self.titleFontsize)
+            #matplotlib.pyplot.tight_layout()
+            if self.xCol2 != 0:
+                axX2.set_xticklabels(self.xColTicksToXCol2Ticks(ax.get_xticks()))
+            self.saveFig()
+            self.rescaleRcParams(self.scaleX)
+            matplotlib.pyplot.close(self.fig)
+        return [self,self.processFileName(option=".pdf")] #filename
+
+    def do3DPlot(self):
+        if not self.no_plot:
+            self.fig, self.ax = self.newFig(customFontsize=self.customFontsize,
+                                            font=self.font,
+                                            axRect=self.axRect, 
+                                            fig_width_pt=self.fig_width_pt, 
+                                            fixedFigWidth=self.fixedFigWidth, 
+                                            scaleX=self.scaleX, 
+                                            HWratio=self.HWratio,
+                                            marker_size=self.markerSize
+                                           )
+            ax= self.ax
+            xLabel=self.showColLabelUnit[self.xCol]
+            ax.set_xlabel(xLabel, labelpad=self.labelpad)
+            if self.showColAxType[self.xCol] == "log":
+                ax.set_xscale("log")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
+            ax.set_ylabel(self.axYLabel, labelpad=self.labelpad)
+            #ax.set_xticklabels(ax.get_xticks())
+            
+            try:
+                if self.showColAxType[self.showCol] == "log":
+                    ax.set_yscale("log", nonpositive="clip")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
+            except TypeError:
+                if self.showColAxType[self.showCol[0]] == "log":
+                    ax.set_yscale("log", nonpositive="clip")#, basex=10, subsy=[2,3,4,5,6,7,8,9])
+            if self.axYLim is not None:
+                ax.set_ylim(*self.axYLim)
+            if self.axXLim is not None:
+                ax.set_xlim(*self.axXLim)
+                
+            self.dataList=self.processData()
+            
+            self.process3DPlot()
+
+            #BEGIN: WARNING DANGEROUS!!!
+            exec(self.injCode)
+            #END: WARNING DANGEROUS!!!
+            self.handleAxAnnotations()
+            self.afterPlot()
+            handles, labels=ax.get_legend_handles_labels()
+            handles_temp=[]
+            for h in handles:
+                try:
+                    handles_temp.append(h[0])
+                except TypeError:
+                    handles_temp.append(h)
+            handles=handles_temp
+            #handles = [h[0] for h in handles]
+            #labels = labels[0:self.devices]
+            if True in [a[1] for a in self.show] and self.ax2Labels and self.showCol2 != 0:
+                handles2, labels2=ax2.get_legend_handles_labels()
+                handles2 = [h[0] for h in handles2]
+                #labels2 = labels2[0:self.devices]
+                handles=handles+handles2
+                labels=labels+labels2
             if self.legendBool:
                 leg=ax.legend(handles, labels, loc=self.legLoc, numpoints=1, facecolor="none")
                 leg.get_frame().set_linewidth(self.legendEdgeSize)
