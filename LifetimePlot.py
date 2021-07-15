@@ -9,6 +9,7 @@ import matplotlib as mpl
 import matplotlib.pyplot
 import numpy as np
 import scipy.interpolate as inter
+import pandas as pd
 import copy
 import sys
 import os
@@ -17,8 +18,9 @@ import warnings
 import functools
 import copy
 import inspect
+import datetime
 from matplotlib import rc
-from Filereader import fileToNpArray
+from Filereader import fileToNpArray, comma_str_to_float
 from Data import Data
 from Fitter import Fitter
 from Plot import Plot
@@ -35,6 +37,9 @@ class LifetimePlot(Plot):
     #ProgKonst
     chars=list(string.ascii_uppercase) #alphabetUppercase
     convFac=(h*c)/e #eV*nm
+    
+    default_streak_file_format=dict(index_col=0, header=0 ,sep="\t", encoding="utf-8", converters={0:comma_str_to_float})
+    default_phelos_file_format=dict(index_col=0, header=None ,sep="\t", comment='#', encoding="iso-8859-1")
     
     @classmethod
     def noNegatives(cls,a):
@@ -65,6 +70,86 @@ class LifetimePlot(Plot):
     def twoExpSplines(cls, x, end1, start2, tau, amp, offset, tau2, amp2, offset2):
         return amp*np.exp(-x/tau)+offset*np.heaviside(end1-x,0)+amp2*np.exp(-x/tau2)+offset2*np.heaviside(x-start2,0)
     
+    @classmethod
+    def parse_streak_data(cls, filenames, locs, fileformat=default_streak_file_format, spectrometer_thresh=1):
+        data=[]
+        for filename,loc in zip(filenames,locs):
+            spectra_d=pd.read_csv(filename[0], **fileformat)
+            spectra_d.columns=[comma_str_to_float(col) for col in spectra_d.columns]
+            i=0
+            for col in spectra_d.columns:
+                if col <= loc:
+                    break
+                i+=1
+            pre_array=spectra_d.iloc[:,i]
+            a_np=pre_array.to_numpy()
+            a_min=a_np.min()
+            a_np=a_np-a_min
+            a_np[a_np == 0.0]=spectrometer_thresh
+            a_max=a_np.max()
+            a_np=a_np/a_max
+            t=pre_array.index.to_numpy()
+            data.append((t,a_np))
+        return data
+    
+    @classmethod
+    def parse_phelos_datetime(cls, phelos_timestring):
+        month, day, year = phelos_timestring[-1].split("/")
+        hour, minute, second = phelos_timestring[0].split(":")
+        year=int(year)
+        month= int(month)
+        day = int(day)
+        if phelos_timestring[1]=="PM":
+            hour= int(hour)+12
+        else:
+            hour= int(hour)
+        minute= int(minute)
+        microsecond= int(second.split(".")[1])*1000
+        second= int(second.split(".")[0])
+        return datetime.datetime(year, month, day, hour, minute, second, microsecond)
+    
+    @classmethod    
+    def parse_phelos_data(cls, filenames, locs, fileformat=default_phelos_file_format, spectrometer_thresh=5*10**-8):
+        data=[]
+        for filename,loc in zip(filename,locs):
+
+            with open(filename[0], encoding=fileformat["encoding"]) as file:
+                file2=file.readlines()
+                desc=[string for string in file2 if string.startswith("#")]
+            i=0
+            for line in desc:
+                if line.startswith('# Measured between'):
+                    meas_start=desc[i+1]
+                    meas_start_time=self.parse_phelos_datetime(meas_start.split(" ")[1:4])
+                    meas_end=desc[i+2]
+                    meas_end_time=self.parse_phelos_datetime(meas_end.split(" ")[1:4])
+                elif line.startswith('# Current'):
+                    current=line.split(" ")[2:]
+                elif line.startswith('# Sweep'):
+                    steps=int(line.split("|")[1].split(" ")[3])
+                i+=1
+            timestep=(meas_end_time-meas_start_time)/steps
+            timesteps=[meas_start_time+timestep*step for step in range(1,steps+1)]
+
+            spectra_d=pd.read_csv(filename[0], **fileformat)
+            spectra_d=spectra_d.drop(columns=np.arange(2,len(spectra_d.columns-1),2))
+            spectra_d.columns=timesteps
+            i=0
+            for row in spectra_d.index:
+                if row >= loc:
+                    break
+                i+=1
+            a=spectra_d.iloc[i]
+            a_np=a.to_numpy()
+            a_np=a_np[a_np > spectrometer_thresh]
+            a_max=a_np.max()
+            a_np=np.abs(a_np)
+            a_np=a_np/a_max
+            timesteps=timesteps[:len(a_np)]
+            t=[(timestep-timesteps[0] ).total_seconds() for timestep in timesteps]
+            data.append((t,a_np))
+        return data
+    
     def __init__(self,
                  name,
                  fileList,
@@ -85,9 +170,13 @@ class LifetimePlot(Plot):
                  normalize_peak=True,
                  set_peak_to_zero=True,
                  time_domain="n",
-                 fse="Decay with \n A = {:3.0f}\\,\\% \\& $\\tau$ ~= {:3.0f}\\,{}s",
+                 fse="Decay with \n A = {:3.0f}\\,\\% \\& t = {:3.0f}\\,{}s",
+                 parse_data_style="streak",
+                 locs=None,
                  **kwargs
                 ):
+        self.parse_data_style=parse_data_style
+        self.locs=locs
         Plot.__init__(self, name, fileList, averageMedian=averageMedian, showColAxType=showColAxType, showColAxLim=showColAxLim, showColLabel=showColLabel, showColLabelUnit=showColLabelUnit, fileFormat=fileFormat, errors=errors, fitColors=fitColors, partialFitLabels=["Partial mono-exponential fit"], **kwargs)
         #dyn inits
         if title is None:
@@ -101,6 +190,7 @@ class LifetimePlot(Plot):
         self.time_domain=time_domain
         self.showColLabelUnit[1]=showColLabelUnit[1].format(time_domain)
         self.fse=fse
+
         #self.dataList=self.importData()
 
     def processFileName(self, option=".pdf"):
@@ -111,7 +201,11 @@ class LifetimePlot(Plot):
         if not self.scaleX == 1:
             string+=self.fill+"scaledWith{:03.0f}Pct".format(self.scaleX*100)
         if self.filenamePrefix is not None:
-            string=self.filenamePrefix+string
+            self.processFileName_makedirs()
+            if self.filenamePrefix[-1] == os.sep:
+                string=self.filenamePrefix+string
+            else:
+                string=self.filenamePrefix+self.fill+string
         if not self.normalize_peak:
             string+=self.fill+"not"
             string+=self.fill+"normalised"
@@ -244,7 +338,30 @@ class LifetimePlot(Plot):
     
         
     def importData(self):
-        self.dataList=[[Data(fileToNpArray(pixel, **self.fileFormat)[0]) for pixel in device] for device in self.fileList]
+        if not self.dataImported:
+            dataList=[]
+            filenames=self.fileList
+            if self.parse_data_style == "streak":
+                if self.locs is None:
+                    raise Exception("Locs unspecified")
+                locs=self.locs
+                if self.fileFormat is None:
+                    data=self.parse_streak_data(filenames, locs)
+                else:
+                    data=self.parse_streak_data(filenames, locs, fileformat=self.fileFormat)
+            elif self.parse_data_style == "phelos":
+                if self.locs is None:
+                    raise Exception("Locs unspecified")
+                locs=self.locs
+                if self.fileformat is None:
+                    data=self.parse_phelos_data(filenames, locs)
+                else:
+                    data=self.parse_phelos_data(filenames, locs, fileformat=self.fileFormat)
+            else:
+                raise Exception("No such parse style")
+            for data_tup in data:
+                dataList.append([Data(Data.mergeData2D(*data_tup))])
+            self.dataList=dataList
         return self.dataList
     
     
@@ -271,7 +388,7 @@ class LifetimePlot(Plot):
         if tp is None:
             tp=fitter.textPos
         arprps=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n], edgecolor=self.fitColors[n], linewidth=mpl.rcParams["lines.linewidth"])
-        ax.annotate(s=se, size=sze, xy=xsy, xytext=tp, arrowprops=arprps)
+        ax.annotate(text=se, size=sze, xy=xsy, xytext=tp, arrowprops=arprps)
     
     
     def afterPlot(self):
