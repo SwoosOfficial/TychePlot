@@ -205,6 +205,22 @@ class Plot():
         return fig, ax
 
     @classmethod
+    def makeDataFromFile_with_cols(cls, measurement, fileFormat, xCol, yCol, lower_crop=0, upper_crop=0):
+        if upper_crop==0:
+            return Data(
+                        fileToNpArray(measurement, **fileFormat)[0][lower_crop:], 
+                        desc=fileToNpArray(measurement, 
+                                           **fileFormat)[1], 
+                        xCol=xCol, 
+                        yCol=yCol)
+        return Data(
+                    fileToNpArray(measurement, **fileFormat)[0][lower_crop:upper_crop], 
+                    desc=fileToNpArray(measurement, 
+                                       **fileFormat)[1], 
+                    xCol=xCol, 
+                    yCol=yCol)
+    
+    @classmethod
     def initTex(cls, customFontsize=None, font=default_font, font_size=default_font_size, scaleX=1, marker_size=default_marker_size):
         pgf_with_lualatex={
                 "pgf.texsystem": pgfSys,

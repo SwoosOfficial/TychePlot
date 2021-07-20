@@ -38,6 +38,7 @@ class LifetimePlot(Plot):
     chars=list(string.ascii_uppercase) #alphabetUppercase
     convFac=(h*c)/e #eV*nm
     
+    default_messbox_file_format={"separator":"\t", "skiplines":1}
     default_streak_file_format=dict(index_col=0, header=0 ,sep="\t", encoding="utf-8", converters={0:comma_str_to_float})
     default_phelos_file_format=dict(index_col=0, header=None ,sep="\t", comment='#', encoding="iso-8859-1")
     
@@ -90,6 +91,12 @@ class LifetimePlot(Plot):
             a_np=a_np/a_max
             t=pre_array.index.to_numpy()
             data.append((t,a_np))
+        return data
+    
+    @classmethod
+    def parse_messbox_data(cls, filenames, fileformat=default_messbox_file_format, spectrometer_thresh=10**-13, **kwargs):
+        data=[]
+        data=[[cls.makeDataFromFile_with_cols(measurement, fileformat, 0, 3, **kwargs) for measurement in sample] for sample in filenames]
         return data
     
     @classmethod
@@ -341,7 +348,13 @@ class LifetimePlot(Plot):
         if not self.dataImported:
             dataList=[]
             filenames=self.fileList
-            if self.parse_data_style == "streak":
+            if self.parse_data_style == "messbox":
+                if self.fileFormat is None:
+                    data=self.parse_messbox_data(filenames)
+                else:
+                    data=self.parse_messbox_data(filenames, fileformat=self.fileFormat)
+                dataList=data
+            elif self.parse_data_style == "streak":
                 if self.locs is None:
                     raise Exception("Locs unspecified")
                 locs=self.locs
@@ -358,9 +371,10 @@ class LifetimePlot(Plot):
                 else:
                     data=self.parse_phelos_data(filenames, locs, fileformat=self.fileFormat)
             else:
-                raise Exception("No such parse style")
-            for data_tup in data:
-                dataList.append([Data(Data.mergeData2D(*data_tup))])
+                raise Exception(f"No such parse style {self.parse_data_style}")
+            if dataList == []:
+                for data_tup in data:
+                    dataList.append([Data(Data.mergeData2D(*data_tup))])
             self.dataList=dataList
         return self.dataList
     
