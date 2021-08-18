@@ -21,6 +21,9 @@ class Data:
         
     def __iter__(self):
         return self.getData()
+    
+    def __repr__(self):
+        return repr(f"Data object: {self.getData()}")
         
     def getData(self): 
         return self.__data
@@ -130,14 +133,14 @@ class Data:
                     if len(xLim) == 2:
                         try:
                             start=self.getFirstIndexWhereGreaterOrEq(xCol, xLim[0], check_seq=check_seq)
-                        except IndexError:
+                        except IndexError as i:
                             start=0
-                            warnings.warn("Invalid start limit")
+                            warnings.warn(str(i))
                         try:
                             end=self.getFirstIndexWhereGreaterOrEq(xCol, xLim[1], check_seq=check_seq)
-                        except IndexError:
+                        except IndexError as i:
                             end=len(data)
-                            warnings.warn("Invalid end limit")
+                            warnings.warn(str(i))
                         try:
                             data=data[start:end+1]
                         except IndexError:
@@ -146,14 +149,14 @@ class Data:
                     if len(yLim) == 2:
                         try:
                             start=self.getFirstIndexWhereGreaterOrEq(xCol, xLim[0], check_seq=check_seq)
-                        except IndexError:
+                        except IndexError as i:
                             start=0
-                            warnings.warn("Invalid start limit")
+                            warnings.warn(str(i))
                         try:
                             end=self.getFirstIndexWhereGreaterOrEq(xCol, xLim[1], check_seq=check_seq)
-                        except IndexError:
+                        except IndexError as i:
                             end=len(data)
-                            warnings.warn("Invalid end limit")
+                            warnings.warn(str(i))
                         try:
                             data=data[start:end+1]
                         except IndexError:
@@ -163,27 +166,27 @@ class Data:
                     if len(xLim) == 2:
                         try:
                             start=self.getFirstIndexWhereGreaterOrEq(xCol, xLim[0], check_seq=check_seq)
-                        except IndexError:
+                        except IndexError as i:
                             start=0
-                            warnings.warn("Invalid start limit")
+                            warnings.warn(str(i))
                         try:
                             end=self.getFirstIndexWhereGreaterOrEq(xCol, xLim[1], check_seq=check_seq)
-                        except IndexError:
+                        except IndexError as i:
                             end=len(data)
-                            warnings.warn("Invalid end limit")
+                            warnings.warn(str(i))
                         data=data[start:end]   
                 if isinstance(yLim, list) or isinstance(yLim, tuple):
                     if len(yLim) == 2:
                         try:
                             start=self.getFirstIndexWhereGreaterOrEq(xCol, xLim[0], check_seq=check_seq)
-                        except IndexError:
+                        except IndexError as i:
                             start=0
-                            warnings.warn("Invalid start limit")
+                            warnings.warn(str(i))
                         try:
                             end=self.getFirstIndexWhereGreaterOrEq(xCol, xLim[1], check_seq=check_seq)
-                        except IndexError:
+                        except IndexError as i:
                             end=len(data)
-                            warnings.warn("Invalid end limit")
+                            warnings.warn(str(i))
                         data=data[start:end]
                 
         self.setData(data)
