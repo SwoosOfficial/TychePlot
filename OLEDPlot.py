@@ -355,7 +355,8 @@ class OLEDPlot(Plot):
     
     def remDarkCurr(self,phot):
         if self.darkCurrent is None:
-            a= phot-np.average(phot[self.darkCurrentValidPoints[0]:self.darkCurrentValidPoints[1]])
+            avg=np.mean(phot[self.darkCurrentValidPoints[0]:self.darkCurrentValidPoints[1]])
+            a= phot-avg
         else:
             a= phot-self.darkCurrent
         return np.maximum(a*0+10**-14,np.absolute(a))
