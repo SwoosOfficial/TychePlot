@@ -1078,6 +1078,7 @@ class OLEDPlot_db:
             if list(self.__oleds_df.columns) != self.raw_columns:
                 raise Exception("Invalid data base type")
         except (FileNotFoundError, ValueError):
+            warnings.warn("Error importing db")
             self.__oleds_df = None
 
     def add_oled(self, oled):
@@ -1098,7 +1099,7 @@ class OLEDPlot_db:
             self.__oleds_df.to_pickle(db_path)
 
     def get_df(self):
-        return self.__oled_df
+        return self.__oleds_df
 
     def add_max_eqe(self, eqe_thresh=0.1, check_seq=5):
         max_eqes = []
