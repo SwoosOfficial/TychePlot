@@ -47,7 +47,12 @@ class LifetimePlot(Plot):
         converters={0: comma_str_to_float},
     )
     default_phelos_file_format = dict(
-        index_col=0, header=None, sep="\t", comment="#", encoding="iso-8859-1"
+        index_col=0,
+        header=None,
+        sep="\t",
+        comment="#",
+        encoding="iso-8859-1",
+        fileEnding=".txt",
     )
 
     @classmethod
@@ -160,20 +165,22 @@ class LifetimePlot(Plot):
         spectrometer_thresh=5 * 10 ** -8,
     ):
         data = []
-        for filename, loc in zip(filename, locs):
-
-            with open(filename[0], encoding=fileformat["encoding"]) as file:
+        fileEnding = fileformat.pop("fileEnding")
+        for filename, loc in zip(filenames, locs):
+            with open(
+                filename[0] + fileEnding, encoding=fileformat["encoding"]
+            ) as file:
                 file2 = file.readlines()
                 desc = [string for string in file2 if string.startswith("#")]
             i = 0
             for line in desc:
                 if line.startswith("# Measured between"):
                     meas_start = desc[i + 1]
-                    meas_start_time = self.parse_phelos_datetime(
+                    meas_start_time = cls.parse_phelos_datetime(
                         meas_start.split(" ")[1:4]
                     )
                     meas_end = desc[i + 2]
-                    meas_end_time = self.parse_phelos_datetime(meas_end.split(" ")[1:4])
+                    meas_end_time = cls.parse_phelos_datetime(meas_end.split(" ")[1:4])
                 elif line.startswith("# Current"):
                     current = line.split(" ")[2:]
                 elif line.startswith("# Sweep"):
@@ -184,7 +191,7 @@ class LifetimePlot(Plot):
                 meas_start_time + timestep * step for step in range(1, steps + 1)
             ]
 
-            spectra_d = pd.read_csv(filename[0], **fileformat)
+            spectra_d = pd.read_csv(filename[0] + fileEnding, **fileformat)
             spectra_d = spectra_d.drop(
                 columns=np.arange(2, len(spectra_d.columns - 1), 2)
             )
@@ -197,9 +204,12 @@ class LifetimePlot(Plot):
             a = spectra_d.iloc[i]
             a_np = a.to_numpy()
             a_np = a_np[a_np > spectrometer_thresh]
-            a_max = a_np.max()
-            a_np = np.abs(a_np)
-            a_np = a_np / a_max
+            try:
+                a_max = a_np.max()
+                a_np = np.abs(a_np)
+                a_np = a_np / a_max
+            except ValueError:
+                a_np = np.ones(len(a_np))
             timesteps = timesteps[: len(a_np)]
             t = [(timestep - timesteps[0]).total_seconds() for timestep in timesteps]
             data.append((t, a_np))
@@ -209,7 +219,7 @@ class LifetimePlot(Plot):
         self,
         name,
         fileList,
-        fileFormat={"separator": "\t", "skiplines": 10},
+        fileFormat=None,
         title=None,
         validYCol=2,
         showColAxType=["lin", "lin", "log"],
@@ -524,7 +534,7 @@ class LifetimePlot(Plot):
                 if self.locs is None:
                     raise Exception("Locs unspecified")
                 locs = self.locs
-                if self.fileformat is None:
+                if self.fileFormat is None:
                     data = self.parse_phelos_data(filenames, locs)
                 else:
                     data = self.parse_phelos_data(
