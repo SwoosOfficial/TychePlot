@@ -19,6 +19,8 @@ import functools
 import copy
 import inspect
 
+from scipy.signal import savgol_filter
+
 # import mpl_toolkits.axisartist as AA
 from matplotlib import rc
 from Filereader import fileToNpArray
@@ -238,6 +240,7 @@ class Plot:
         scaleX=1,
         HWratio=1,
         marker_size=default_marker_size,
+        projection=None,
     ):
         matplotlib.pyplot.clf()
         cls.initTex(customFontsize=customFontsize, font=font, marker_size=marker_size)
@@ -245,7 +248,7 @@ class Plot:
             figsize=cls.figsize(fig_width_pt, fixedFigWidth, scaleX, HWratio),
             facecolor="none",
         )
-        ax = matplotlib.pyplot.axes(axRect)
+        ax = matplotlib.pyplot.axes(axRect, projection=projection)
         return fig, ax
 
     @classmethod
@@ -341,7 +344,7 @@ class Plot:
     def __init__(
         self,
         name,
-        fileList,
+        fileList=None,
         fileFormat={"separator": "\t", "skiplines": 1},
         showColTup=(2, 3),
         xLim=None,
@@ -408,6 +411,7 @@ class Plot:
         legLoc=0,
         fitList=None,
         fitLabels=None,
+        fitString="Fit of",
         fitAlpha=0.75,
         fitLs=":",
         fitColors=None,
@@ -439,7 +443,7 @@ class Plot:
         labelPad=None,
         saveProps=None,
         axAnnotations=None,
-        D3props=default_D3props,
+        _filter=None,
         # ax_aspect='auto',
     ):
         # static inits
@@ -550,7 +554,10 @@ class Plot:
             showErrorOnlyEvery[0]
             self.showErrorOnlyEvery = showErrorOnlyEvery
         except:
-            self.showErrorOnlyEvery = [showErrorOnlyEvery] * len(fileList)
+            try:
+                self.showErrorOnlyEvery = [showErrorOnlyEvery] * len(fileList)
+            except TypeError:
+                self.showErrorOnlyEvery = [showErrorOnlyEvery] * len(dataList)
         self.erroralpha = erroralpha
         self.ax2erroralpha = ax2erroralpha
         self.erroralphabar = erroralphabar
@@ -602,6 +609,7 @@ class Plot:
             self.fitColors = fitColors
         self.fitLs = fitLs
         self.fitAlpha = fitAlpha
+        self.fitString = fitString
         self.showFitInLegend = showFitInLegend
         self.fixedFigWidth = fixedFigWidth
         self.xAxis2 = xAxis2
@@ -629,22 +637,28 @@ class Plot:
         self.labelpad = labelPad
         self.saveProps = saveProps
         self.axAnnotations = axAnnotations
-        self.D3props = D3props
+        self._filter = _filter
         # self.ax_aspect=ax_aspect
         # inits
         # if mpl_use == "pgf":
         #    self.mpl_tex = True;
         # else:
         #    self.mpl_tex = False
-        if newFileList is not None:
-            self.__initFileList(
-                newFileList, errors, labels, show, fitLabels, showLines, showMarkers
-            )
+        if self.dataList is None:
+            if newFileList is not None:
+                self.__initFileList(
+                    newFileList, errors, labels, show, fitLabels, showLines, showMarkers
+                )
+            else:
+                self.__initFileList(
+                    fileList, errors, labels, show, fitLabels, showLines, showMarkers
+                )
+            self.dataList = self.importData()
         else:
             self.__initFileList(
-                fileList, errors, labels, show, fitLabels, showLines, showMarkers
-            )
-        self.dataList = self.importData()
+                    dataList, errors, labels, show, fitLabels, showLines, showMarkers
+                )
+        
 
     def __initFileList(
         self, fileList, errors, labels, show, fitLabels, showLines, showMarkers
@@ -733,7 +747,7 @@ class Plot:
                 elif errors[0] is False and errors[1] is True:
                     self.errors = [[True, False] for device in self.fileList]
             if fitLabels is None:
-                self.fitLabels = ["Fit of " + label for label in self.labels]
+                self.fitLabels = [self.fitString + label for label in self.labels]
             else:
                 self.fitLabels = fitLabels
             if isinstance(showLines, list):
@@ -758,7 +772,6 @@ class Plot:
             elif type(fitTuple) is not tuple and type(fitTuple) is list:
                 fitSubList = []
                 n = 0
-                print(fitTuple)
                 for fTuple in fitTuple:
                     if n == 0:
                         expectCopy = expect
@@ -930,12 +943,26 @@ class Plot:
                 ]
         return self.dataList
 
+    def filter_data(self, data, yCol):
+        try:
+            if self._filter["type"] == "savgol":
+
+                def this_savgol_filter(data):
+                    return savgol_filter(data, self._filter["p1"], self._filter["p2"])
+
+                data.processData(this_savgol_filter, yCol=yCol)
+        except:
+            return
+    
+    
     def processData(self):
         if not self.dataProcessed:
             for deviceData in self.dataList:
                 for data in deviceData:
                     data.limitData(xLim=self.xLimOrig)
                     # print("limiting data to: "+str(self.xLimOrig))
+                    if self._filter != None:
+                        self.filter_data(data)
             self.dataProcessed = True
         return self.dataList
 
