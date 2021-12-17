@@ -160,7 +160,7 @@ class SpectraPlot(Plot):
     def __init__(
         self,
         name,
-        fileList,
+        fileList=None,
         fileFormat=spectral_data_format_default,
         title=None,
         validYCol=[2],
@@ -201,16 +201,18 @@ class SpectraPlot(Plot):
         rainbowMode=False,
         fitColors=[
             "#000000",
-            "#d62728",
+            "#000000",
             "#2ca02c",
             "#9467bd",
             "#8c564b",
             "#e377c2",
             "#7f7f7f",
             "#ff7f0e",
-            "#bcbd22",
-            "#17becf",
-            "#f8e520",
+            (148 / 255, 103 / 255, 189 / 255, 0.7),
+            (214 / 255, 39 / 255, 40 / 255, 0.7),
+            (31 / 255, 119 / 255, 180 / 255, 0.7),
+      
+        
         ],
         bgfile=None,
         validYTable=None,
@@ -219,7 +221,6 @@ class SpectraPlot(Plot):
         ticklabelformat="sci",
         rb_pos=-0.035,
         rb_h=0.01,
-        _filter=None,
         **kwargs,
     ):
         if rainbowMode:
@@ -258,7 +259,7 @@ class SpectraPlot(Plot):
         self.ticklabelformat = ticklabelformat
         self.rb_pos = rb_pos
         self.rb_h = rb_h
-        self._filter = _filter
+
         # self.dataList=self.importData()
 
     def processFileName(self, option=".pdf"):
@@ -302,7 +303,8 @@ class SpectraPlot(Plot):
             self.postprocess_normalization = True
         else:
             return
-
+        
+        
     def filter_data(self, data):
         try:
             if self._filter["type"] == "savgol":
@@ -315,7 +317,8 @@ class SpectraPlot(Plot):
                 data.processData(this_savgol_filter, yCol=6)
         except:
             return
-
+        
+        
     def __sub_processData(self, data, yCol, backg=None):
         try:
             if backg is None:
@@ -419,7 +422,7 @@ class SpectraPlot(Plot):
         data,
         fitter,
         yoffset_fac=0.1,
-        fstring="Emission at \n{:3.0f}\\,nm / {:3.2f}\\,eV",
+        fstring="Emission at \n{:4.1f} nm / {:3.2f} eV",
         fwhm_string="Peak: {:3.0f}\\,nm / {:3.2f}\\,eV\nFWHM: {:3.0f}\\,nm / {:3.0f}\\,",
         override_xpos=None,
     ):
@@ -446,18 +449,18 @@ class SpectraPlot(Plot):
             )
         else:
             se = fstring.format(
-                np.round(self.convFac / peak, decimals=0), np.round(peak, decimals=2)
+                np.round(self.convFac / peak, decimals=1), np.round(peak, decimals=2)
             )
         return self.ax.annotate(
-            s=se,
+            text=se,
             size=self.customFontsize[2],
             xy=(peak, np.amax(data) - yoffset_fac * np.amax(data)),
             xytext=tp,
             arrowprops=dict(
                 arrowstyle="<-",
                 connectionstyle="arc3",
-                facecolor=self.fitColors[n + 1 + param_pos // 3],
-                edgecolor=self.fitColors[n + 1 + param_pos // 3],
+                facecolor=self.fitColors[-n-1],
+                edgecolor=self.fitColors[-n-1],
                 linewidth=mpl.rcParams["lines.linewidth"],
             ),
         )
@@ -467,7 +470,7 @@ class SpectraPlot(Plot):
         ydata1 = self.gauss(xdata, *fitter.params[0:3])
         ydata2 = self.gauss(xdata, *fitter.params[3:6])
         textPos = fitter.textPos
-        textPos2 = [fitter.textPos[0], fitter.textPos[1] + 0.15]
+        textPos2 = [fitter.textPos[0], fitter.textPos[1] + 0.1]
         amp = fitter.params[1] / (np.sqrt(2 * np.pi * fitter.params[2] ** 2))
         amp2 = fitter.params[1 + 3] / (np.sqrt(2 * np.pi * fitter.params[2 + 3] ** 2))
         if amp > amp2:
@@ -479,7 +482,7 @@ class SpectraPlot(Plot):
         self.ax.errorbar(
             xdata,
             ydata1,
-            c=self.fitColors[n + 1],
+            c=self.fitColors[-n-1],
             ls=self.fitLs,
             label="Partial mono-Gaussian fit",
             alpha=self.fitAlpha,
@@ -488,7 +491,7 @@ class SpectraPlot(Plot):
         self.ax.errorbar(
             xdata,
             ydata2,
-            c=self.fitColors[n + 2],
+            c=self.fitColors[-n-1],
             ls=self.fitLs,
             label="Partial mono-Gaussian fit",
             alpha=self.fitAlpha,
@@ -501,8 +504,8 @@ class SpectraPlot(Plot):
         ydata2 = self.gauss(xdata, *fitter.params[3:6])
         ydata3 = self.gauss(xdata, *fitter.params[6:9])
         textPos = fitter.textPos
-        textPos2 = [fitter.textPos[0], fitter.textPos[1] + 0.15]
-        textPos3 = [fitter.textPos[0], fitter.textPos[1] + 0.3]
+        textPos2 = [fitter.textPos[0], fitter.textPos[1] + 0.1]
+        textPos3 = [fitter.textPos[0], fitter.textPos[1] + 0.2]
         amp = fitter.params[1] / (np.sqrt(2 * np.pi * fitter.params[2] ** 2))
         amp2 = fitter.params[1 + 3] / (np.sqrt(2 * np.pi * fitter.params[2 + 3] ** 2))
         amp3 = fitter.params[1 + 6] / (np.sqrt(2 * np.pi * fitter.params[2 + 6] ** 2))
@@ -537,7 +540,7 @@ class SpectraPlot(Plot):
         self.ax.errorbar(
             xdata,
             ydata1,
-            c=self.fitColors[n + 1],
+            c=self.fitColors[-n-1],
             ls=self.fitLs,
             label="Partial mono-Gaussian fit",
             alpha=self.fitAlpha,
@@ -547,7 +550,7 @@ class SpectraPlot(Plot):
         self.ax.errorbar(
             xdata,
             ydata2,
-            c=self.fitColors[n + 2],
+            c=self.fitColors[-n-1],
             ls=self.fitLs,
             label="Partial mono-Gaussian fit",
             alpha=self.fitAlpha,
@@ -557,7 +560,7 @@ class SpectraPlot(Plot):
         self.ax.errorbar(
             xdata,
             ydata3,
-            c=self.fitColors[n + 3],
+            c=self.fitColors[-n-1],
             ls=self.fitLs,
             label="Partial mono-Gaussian fit",
             alpha=self.fitAlpha,
