@@ -56,8 +56,8 @@ class LifetimePlot(Plot):
     )
 
     @classmethod
-    def noNegatives(cls, a):
-        return np.maximum(a, np.zeros(len(a), dtype=np.float64))
+    def noNegatives(cls, a, fill_value=0):
+        return np.maximum(a, fill_value*np.ones(len(a), dtype=np.float64))
 
     @classmethod
     def normalize(cls, a):
@@ -250,7 +250,7 @@ class LifetimePlot(Plot):
         normalize_peak=True,
         set_peak_to_zero=True,
         time_domain="n",
-        fse="Decay with \n A = {:3.0f}\\,\\% \\& t = {:3.0f}\\,{}s",
+        fse="Decay with \n A$_{:d}$ = {:3.0f}\\,\\% \\& τ$_{:d}$ = {:3.0f}\\,{}s",
         parse_data_style="streak",
         locs=None,
         **kwargs,
@@ -324,12 +324,13 @@ class LifetimePlot(Plot):
                     for yCol, normalize_peak, set_peak_to_zero in zip(
                         yCol_l, self.normalize_peak, self.set_peak_to_zero
                     ):
+                        # data.setData(Data.mergeData((time, intens, intens)))
+                        if self._filter != None:
+                            self.filter_data(data, yCol)
                         time, intens = (
                             data.getSplitData2D(xCol=1, yCol=yCol)[0],
                             data.getSplitData2D(xCol=1, yCol=yCol)[1] - bg,
                         )
-                        # data.setData(Data.mergeData((time, intens, intens)))
-                        data.processData(self.noNegatives, yCol=yCol)
                         if normalize_peak:
                             data.processData(self.normalize, yCol=yCol)
                         if set_peak_to_zero and not done:
@@ -339,6 +340,7 @@ class LifetimePlot(Plot):
                                 self.shift, x=True, y=False, index=indices[0][0]
                             )
                             done = True
+                        data.processData(self.noNegatives, yCol=yCol, fill_value=10**-4)
                     data.limitData(xLim=self.xLimOrig)
                 self.dataProcessed = True
             return self.dataList
@@ -363,10 +365,11 @@ class LifetimePlot(Plot):
             ydata1,
             c=self.fitColors[n + 2],
             ls=self.fitLs,
-            label="Partial mono-exponential fit",
+            #label="Partial mono-exponential fit",
             alpha=self.fitAlpha,
         )
-        self.handleDesc(fitter, n=n + 2, xsy=(0, np.amax(ydata1)), tp=tp1)
+        sume = fitter.params[1]
+        self.handleDesc(fitter, n=n + 2, xsy=(0, np.amax(ydata1)), tp=tp1, sume=sume)
 
     def plotDoubleExp(self, fitter, n):
         xdata = fitter.CurveData.getSplitData2D()[0]
@@ -375,8 +378,8 @@ class LifetimePlot(Plot):
         ydata3 = xdata / xdata * fitter.params[2]
         textPos = fitter.textPos
         textPos2 = [
-            fitter.textPos[0] + 1 * np.amax(xdata) / 10,
-            fitter.textPos[1] * 0.3,
+            fitter.textPos[0],# + 1 * np.amax(xdata) / 10,
+            fitter.textPos[1] * 0.2,
         ]
         amp = -fitter.params[1]
         amp2 = -fitter.params[4]
@@ -390,28 +393,29 @@ class LifetimePlot(Plot):
             xdata,
             ydata3,
             c=self.fitColors[n + 1],
-            ls=self.fitLs,
-            label="Offset",
-            alpha=self.fitAlpha,
+            ls=":",#self.fitLs,
+            label="offset part",
+            alpha=self.fitAlpha*2/3,
         )
         self.ax.errorbar(
             xdata,
             ydata1,
             c=self.fitColors[n + 2],
-            ls=self.fitLs,
-            label="Partial mono-exponential fit",
-            alpha=self.fitAlpha,
+            ls=":",#self.fitLs,
+            label="short mono-exponential part",
+            alpha=self.fitAlpha*2/3,
         )
         self.ax.errorbar(
             xdata,
             ydata2,
             c=self.fitColors[n + 3],
-            ls=self.fitLs,
-            label="Partial mono-exponential fit",
-            alpha=self.fitAlpha,
+            ls=":",#self.fitLs,
+            label="long mono-exponential part",
+            alpha=self.fitAlpha*2/3,
         )
-        self.handleDesc(fitter, n=n + 2, xsy=(0, np.amax(ydata1)), tp=tp1)
-        self.handleDesc(fitter, n=n + 3, param_pos=3, xsy=(0, np.amax(ydata2)), tp=tp2)
+        sume = (fitter.params[1]+fitter.params[4])
+        self.handleDesc(fitter, n=n + 2, xsy=(0, np.amax(ydata1)), tp=tp1, sume=sume)
+        self.handleDesc(fitter, n=n + 3, param_pos=3, xsy=(0, np.amax(ydata2)), tp=tp2, sume=sume)
         # fse=self.fse
         # se=fse.format(np.round(fitter.params[1]*100,decimals=0),np.round(fitter.params[0],decimals=0),self.time_domain)
         # self.ax.annotate(s=se, size=self.customFontsize[2], xy=(0,np.amax(ydata1)), xytext=tp1, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n+2], edgecolor=self.fitColors[n+2], linewidth=mpl.rcParams["lines.linewidth"]))
@@ -427,11 +431,11 @@ class LifetimePlot(Plot):
         textPos = fitter.textPos
         textPos2 = [
             fitter.textPos[0] + 1 * np.amax(xdata) / 10,
-            fitter.textPos[1] * 0.3,
+            fitter.textPos[1] * 0.5,
         ]
         textPos3 = [
             fitter.textPos[0] + 2 * np.amax(xdata) / 10,
-            fitter.textPos[1] * 0.08,
+            fitter.textPos[1] * 0.2,
         ]
         amp = -fitter.params[1]
         amp2 = -fitter.params[4]
@@ -497,9 +501,10 @@ class LifetimePlot(Plot):
             label="Partial mono-exponential fit",
             alpha=self.fitAlpha,
         )
-        self.handleDesc(fitter, n=n + 2, xsy=(0, np.amax(ydata1)), tp=tp1)
-        self.handleDesc(fitter, n=n + 3, param_pos=3, xsy=(0, np.amax(ydata2)), tp=tp2)
-        self.handleDesc(fitter, n=n + 4, param_pos=5, xsy=(0, np.amax(ydata3)), tp=tp3)
+        sume = (fitter.params[1]+fitter.params[4]+fitter.params[6])
+        self.handleDesc(fitter, n=n + 2, xsy=(0, np.amax(ydata1)), tp=tp1, sume=sume)
+        self.handleDesc(fitter, n=n + 3, param_pos=3, xsy=(0, np.amax(ydata2)), tp=tp2, sume=sume)
+        self.handleDesc(fitter, n=n + 4, param_pos=5, xsy=(0, np.amax(ydata3)), tp=tp3, sume=sume)
         # fse=self.fse
         # se=fse.format(np.round(fitter.params[1]*100,decimals=0),np.round(fitter.params[0],decimals=0),self.time_domain)
         # self.ax.annotate(s=se, size=self.customFontsize[2], xy=(0,np.amax(ydata1)), xytext=tp1, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n+2], edgecolor=self.fitColors[n+2], linewidth=mpl.rcParams["lines.linewidth"]))
@@ -548,9 +553,9 @@ class LifetimePlot(Plot):
             self.dataList = dataList
         return self.dataList
 
-    def handleDesc(self, fitter, n=2, param_pos=0, xsy=None, tp=None):
+    def handleDesc(self, fitter, n=2, param_pos=0, xsy=None, tp=None, sume=None):
         ax = self.ax
-        if fitter.params[0] < 1 or self.time_domain == "p":
+        if fitter.params[0] <= 1.5 or self.time_domain == "p":
             timedomain = "p"
             lifetime = fitter.params[param_pos] * 1000
         else:
@@ -562,13 +567,17 @@ class LifetimePlot(Plot):
 
         try:
             se = fitter.desc.format(
-                np.round(fitter.params[param_pos + 1] * 100, decimals=0),
+                n-1,
+                np.round(fitter.params[param_pos + 1] * 100/sume, decimals=0),
+                n-1,
                 np.round(lifetime, decimals=0),
                 timedomain,
             )
         except:
             se = self.fse.format(
-                np.round(fitter.params[param_pos + 1] * 100, decimals=0),
+                n-1,
+                np.round(fitter.params[param_pos + 1] * 100 /sume, decimals=0),
+                n-1,
                 np.round(lifetime, decimals=0),
                 timedomain,
             )
