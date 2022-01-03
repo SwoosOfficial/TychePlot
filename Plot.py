@@ -1324,13 +1324,11 @@ class Plot:
     def handleAxAnnotations(self):
         if self.axAnnotations is not None:
             if self.axAnnotations["ax1"] is not None:
-                ax1_ann = self.axAnnotations["ax1"]
-                self.ax.plot(*ax1_ann["circle_pos"], **ax1_ann["circle_kwargs"])
-                self.ax.annotate("", **ax1_ann["arr_kwargs"])
+                for ax1_ann in self.axAnnotations["ax1"]:
+                    self.ax.annotate(**ax1_ann)
             if self.axAnnotations["ax2"] is not None:
-                ax2_ann = self.axAnnotations["ax2"]
-                self.ax2.plot(*ax2_ann["circle_pos"], **ax2_ann["circle_kwargs"])
-                self.ax2.annotate("", **ax2_ann["arr_kwargs"])
+                for ax2_ann in self.axAnnotations["ax2"]:
+                    self.ax2.annotate(**ax2_ann)
 
     def processPlotSub(
         self, n, ls, mk, fs, ax2ls, ax2mk, ax2fs, ax1color, ax2color, data
@@ -1561,7 +1559,10 @@ class Plot:
         showLines = self.showLines
         if self.iterLinestyles:
             linestyles = self.linestyles
-            ax2linestyles = self.linestyles[:: -self.linestyleOffset]
+            try:
+                ax2linestyles = self.linestyles[:: -self.linestyleOffset]
+            except ValueError:
+                ax2linestyles = self.linestyles
             ax1color = [self.ax1color] * len(expectData)
             ax2color = [self.ax2color] * len(expectData)
         else:
