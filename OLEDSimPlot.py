@@ -65,6 +65,7 @@ class OLEDSimPlot(Plot):
         initpos=0,
         x_scale=10 ** 9,
         x_min=-7,
+        ymax=1,
         metalContactAnode=False,
         metalContactCathode=False,
         colorsMetal=["red", "blue", "green", "cyan", "yellow", "magenta"],
@@ -72,6 +73,7 @@ class OLEDSimPlot(Plot):
         colorGrad=False,
         alphaBG=0.1,
         alphaMBG=0.3,
+        ax_grid=True,
         **kwargs,
     ):
         Plot.__init__(
@@ -95,6 +97,7 @@ class OLEDSimPlot(Plot):
         self.initpos = initpos
         self.x_scale = x_scale
         self.x_min = x_min
+        self.ymax=ymax
         self.metalContactAnode = metalContactAnode
         self.metalContactCathode = False
         self.colorsMetal = colorsMetal
@@ -102,6 +105,7 @@ class OLEDSimPlot(Plot):
         self.colorGrad = colorGrad
         self.alphaBG = alphaBG
         self.alphaMBG = alphaMBG
+        self.ax_grid=ax_grid
         if Delta is None:
             self.Delta = wf_m - wf_o
         else:
@@ -245,7 +249,7 @@ class Stack:
         return f"Stack: {repr(self.Materials)}"
 
     def plotStack(self, plot):
-        plot.fig, ax = plot.newFig()
+        plot.fig, ax = plot.newFig(customFontsize=plot.customFontsize, axRect=plot.axRect, fig_width_pt=plot.fig_width_pt)
         import matplotlib.pyplot as plt
 
         ax.set_xlabel(plot.showColLabelUnit[plot.xCol])
@@ -509,11 +513,12 @@ class Stack:
                     )
         if plot.titleBool:
             ax.set_title(plot.title, fontsize=plot.titleFontSize)
-        ax.set_ylim(plot.x_min, plot.V + 1)
+        ax.set_ylim(plot.x_min, plot.V + plot.ymax)
         if plot.axXLim is not None:
             ax.set_xlim(*plot.axXLim)
         ax.yaxis.set_major_locator(mpl.ticker.MultipleLocator(1))
-        ax.grid(which="major", ls=":", alpha=0.5, axis="y")
+        if plot.ax_grid:
+            ax.grid(which="major", ls=":", alpha=0.5, axis="y")
         plot.saveFig()
         return [plot, plot.processFileName(option=".pdf")]  # filename
 
@@ -608,7 +613,6 @@ class Stack:
                 X, extent=extent, interpolation="bicubic", vmin=0, vmax=1, **kwargs
             )
             return im
-
         h = self.Cz[m.id].lstrip("#")
         rgb = tuple(int(h[i : i + 2], 16) for i in (0, 2, 4))
         new_colors = gauss(np.linspace(0, 1, 256), 0.5, 1, 0.05)
