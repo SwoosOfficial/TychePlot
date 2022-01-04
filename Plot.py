@@ -443,6 +443,7 @@ class Plot:
         labelPad=None,
         saveProps=None,
         axAnnotations=None,
+        ax_grid=True,
         _filter=None,
         # ax_aspect='auto',
     ):
@@ -637,6 +638,7 @@ class Plot:
         self.labelpad = labelPad
         self.saveProps = saveProps
         self.axAnnotations = axAnnotations
+        self.ax_grid=ax_grid
         self._filter = _filter
         # self.ax_aspect=ax_aspect
         # inits
@@ -1671,7 +1673,11 @@ class Plot:
                 ax.set_ylim(*self.axYLim)
             if self.axXLim is not None:
                 ax.set_xlim(*self.axXLim)
-            ax.grid(True, alpha=0.5, linestyle=":")
+            if self.ax_grid is not None:
+                if isinstance(self.ax_grid, dict):
+                    ax.grid(**self.ax_grid)
+                else:
+                    ax.grid(True, alpha=0.5, linestyle=":")
             try:
                 if self.showCol2 != 0:
                     if True in [a[1] for a in self.show]:
