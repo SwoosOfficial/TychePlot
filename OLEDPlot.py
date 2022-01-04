@@ -779,6 +779,12 @@ class OLEDPlot(Plot):
         l = 0
         for data in deviceData:
             data.limitData(xLim=self.xLimOrig, xCol=self.xColOrig)
+            if not self.noSweepBackMeasured:
+                try:
+                    index_sweep=data.getLastIndexWhereGreaterOrEq(self.xColOrig, self.xLimOrig[0])
+                    data.setData(data.getData()[:index_sweep])
+                except TypeError:
+                    pass
             data.processData(self.remDarkCurr, yCol=3)
             data.processData(self.remZeroCurr_func(data), yCol=2)
             data.processData(OLEDPlot.absolute, yCol=2)
