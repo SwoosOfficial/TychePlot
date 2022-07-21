@@ -14,6 +14,51 @@ from Data import Data
 
 class Fitter:
     
+    default_fitColors=[
+            "#000000",
+            "#1f77b4",
+            "#d62728",
+            "#2ca02c",
+            "#9467bd",
+            "#8c564b",
+            "#e377c2",
+            "#7f7f7f",
+            "#ff7f0e",
+            "#bcbd22",
+            "#17becf",
+            "#f8e520",
+        ],
+    
+    @classmethod
+    def return_completed_fitter(cls, 
+                                data, 
+                                function,
+                                noFit=False,
+                                **kwargs):
+        fitter=Fitter(data,function,**kwargs)
+        if isinstance(fitter.dataForFitXLim[0], list):
+            feature = [11, 2]
+        else:
+            feature = [1, 2]
+        if isinstance(fitter.curveDataXLim[0], list):
+            feature[1] = 21
+        else:
+            feature[1] = 2
+        fitter.limitData(xLim=fitter.dataForFitXLim, yLim=fitter.dataForFitYLim, feature=feature[0])
+        if not noFit:
+            try:
+                fitter.fit(xCol=fitter.xCol, yCol=fitter.showCol, p0=fitter.params)
+            except RuntimeError as err:
+                raise cls.FitException(
+                    fitter.function,
+                    "",
+                    err,
+                    fitter.params,
+                )
+        fitter.doFitCurveData(xCol=fitter.xCol)
+        fitter.limitData(xLim=fitter.curveDataXLim, feature=feature[1])
+        return fitter
+    
     def __init__(self, data, function,
                  errorData=None,
                  params = None,
@@ -25,6 +70,9 @@ class Fitter:
                  curveDataYLim=None,
                  textPos=None,
                  desc=None,
+                 fitColors=default_fitColors,
+                 fitAlpha=0.75,
+                 fitLs=":",
                  addKwArgs={}):
         self.data = data
         self.function = function
@@ -41,6 +89,9 @@ class Fitter:
         self.curveDataYLim=curveDataYLim
         self.textPos=textPos
         self.desc=desc
+        self.fitColors=fitColors
+        self.fitAlpha=fitAlpha
+        self.fitLs=fitLs
         self.addKwArgs=addKwArgs
         
     def limitInputData(self, xLim=None, yLim=None):
@@ -133,3 +184,10 @@ class Fitter:
         fit_y_data = self.function(fit_x_data, *self.params)
         self.CurveData = Data.initData2D(fit_x_data, fit_y_data)
 
+class FitException(Exception):
+    def __init__(self, index, props, err, params):
+        self.message = (
+            "Error @ {} with Properties: {} \n Message: {} with parameters {}".format(
+                index, props, str(err), str(params)
+            )
+        )

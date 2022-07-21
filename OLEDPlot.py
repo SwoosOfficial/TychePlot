@@ -786,7 +786,7 @@ class OLEDPlot(Plot):
                 except TypeError:
                     pass
             data.processData(self.remDarkCurr, yCol=3)
-            data.processData(self.remZeroCurr_func(data), yCol=2)
+            #data.processData(self.remZeroCurr_func(data), yCol=2)
             data.processData(OLEDPlot.absolute, yCol=2)
             data.processData(OLEDPlot.removeZeros, yCol=2)
 

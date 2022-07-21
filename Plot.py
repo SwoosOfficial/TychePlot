@@ -25,7 +25,7 @@ from scipy.signal import savgol_filter
 from matplotlib import rc
 from Filereader import fileToNpArray
 from Data import Data
-from Fitter import Fitter
+from Fitter import Fitter, FitException
 
 
 # In[2]:
@@ -101,7 +101,7 @@ class Plot:
             dataImported=True,
             **kwargs,
         )
-
+    
     @classmethod
     def create_line_string(cls, line, sep):
         string = ""
@@ -816,14 +816,6 @@ class Plot:
         return fitterList
 
     def limit_fit_data_and_fit(self, fitter):
-        if isinstance(fitter.dataForFitXLim[0], list):
-            feature = [11, 2]
-        else:
-            feature = [1, 2]
-        if isinstance(fitter.curveDataXLim[0], list):
-            feature[1] = 21
-        else:
-            feature[1] = 2
         fitter.limitData(
             xLim=fitter.dataForFitXLim, yLim=fitter.dataForFitYLim, feature=feature[0]
         )
@@ -1936,12 +1928,3 @@ class Plot:
 
 class ListShapeException(Exception):
     pass
-
-
-class FitException(Exception):
-    def __init__(self, index, props, err, params):
-        self.message = (
-            "Error @ {} with Properties: {} \n Message: {} with parameters {}".format(
-                index, props, str(err), str(params)
-            )
-        )

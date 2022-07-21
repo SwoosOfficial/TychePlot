@@ -38,6 +38,8 @@ class LifetimePlot(Plot):
     chars = list(string.ascii_uppercase)  # alphabetUppercase
     convFac = (h * c) / e  # eV*nm
 
+    default_time_domain="n"
+    fse_default="Decay with \n A$_{:d}$ = {:3.0f}$\,$% \& τ$_{:d}$ = {:3.0f}$\,$s"
     default_messbox_file_format = {"separator": "\t", "skiplines": 1}
     default_streak_file_format = dict(
         index_col=0,
@@ -249,8 +251,8 @@ class LifetimePlot(Plot):
         bgfile=None,
         normalize_peak=True,
         set_peak_to_zero=True,
-        time_domain="n",
-        fse="Decay with \n A$_{:d}$ = {:3.0f}\\,\\% \\& τ$_{:d}$ = {:3.0f}\\,{}s",
+        time_domain=default_time_domain,
+        fse=fse_default,
         parse_data_style="streak",
         locs=None,
         **kwargs,
@@ -340,38 +342,43 @@ class LifetimePlot(Plot):
                                 self.shift, x=True, y=False, index=indices[0][0]
                             )
                             done = True
+                        print(data)
                         data.processData(self.noNegatives, yCol=yCol, fill_value=10**-4)
                     data.limitData(xLim=self.xLimOrig)
                 self.dataProcessed = True
             return self.dataList
 
-    def plotExp(self, fitter, n):
+    def plotExp(self, fitter, n, ax=None):
+        if ax is None:
+            ax=self.ax
         xdata = fitter.CurveData.getSplitData2D()[0]
         ydata1 = self.exp(xdata, *fitter.params[0:2], 0)
         ydata3 = xdata / xdata * fitter.params[2]
         textPos = fitter.textPos
         amp = -fitter.params[1]
         tp1 = textPos
-        self.ax.errorbar(
-            xdata,
-            ydata3,
-            c=self.fitColors[n + 1],
-            ls=self.fitLs,
-            label="Offset",
-            alpha=self.fitAlpha,
-        )
-        self.ax.errorbar(
+#        self.ax.errorbar(
+#            xdata,
+#            ydata3,
+#            c=self.fitColors[n + 1],
+#            ls=self.fitLs,
+#            label="Offset",
+#            alpha=self.fitAlpha,
+#        )
+        ax.errorbar(
             xdata,
             ydata1,
-            c=self.fitColors[n + 2],
-            ls=self.fitLs,
+            c=fitter.fitColors[n + 2],
+            ls=fitter.fitLs,
             #label="Partial mono-exponential fit",
-            alpha=self.fitAlpha,
+            alpha=fitter.fitAlpha,
         )
         sume = fitter.params[1]
         self.handleDesc(fitter, n=n + 2, xsy=(0, np.amax(ydata1)), tp=tp1, sume=sume)
 
-    def plotDoubleExp(self, fitter, n):
+    def plotDoubleExp(self, fitter, n, ax=None):
+        if ax is None:
+            ax=self.ax
         xdata = fitter.CurveData.getSplitData2D()[0]
         ydata1 = self.exp(xdata, *fitter.params[0:2], 0)
         ydata2 = self.exp(xdata, *fitter.params[3:5], 0)
@@ -389,29 +396,29 @@ class LifetimePlot(Plot):
         else:
             tp1 = textPos
             tp2 = textPos2
-        self.ax.errorbar(
+        ax.errorbar(
             xdata,
             ydata3,
             c=self.fitColors[n + 1],
             ls=":",#self.fitLs,
             label="offset part",
-            alpha=self.fitAlpha*2/3,
+            alpha=fitter.fitAlpha*2/3,
         )
-        self.ax.errorbar(
+        ax.errorbar(
             xdata,
             ydata1,
             c=self.fitColors[n + 2],
             ls=":",#self.fitLs,
             label="short mono-exponential part",
-            alpha=self.fitAlpha*2/3,
+            alpha=fitter.fitAlpha*2/3,
         )
-        self.ax.errorbar(
+        ax.errorbar(
             xdata,
             ydata2,
-            c=self.fitColors[n + 3],
+            c=fitter.fitColors[n + 3],
             ls=":",#self.fitLs,
             label="long mono-exponential part",
-            alpha=self.fitAlpha*2/3,
+            alpha=fitter.fitAlpha*2/3,
         )
         sume = (fitter.params[1]+fitter.params[4])
         self.handleDesc(fitter, n=n + 2, xsy=(0, np.amax(ydata1)), tp=tp1, sume=sume)
@@ -422,7 +429,9 @@ class LifetimePlot(Plot):
         # se2=fse.format(np.round(fitter.params[4]*100,decimals=0),np.round(fitter.params[3],decimals=0),self.time_domain)
         # self.ax.annotate(s=se2, size=self.customFontsize[2], xy=(0,np.amax(ydata2)), xytext=tp2, arrowprops=dict(arrowstyle="<-", connectionstyle="arc3", facecolor=self.fitColors[n+3], edgecolor=self.fitColors[n+3], linewidth=mpl.rcParams["lines.linewidth"]))
 
-    def plotTripleExp(self, fitter, n):
+    def plotTripleExp(self, fitter, n, ax=None):
+        if ax is None:
+            ax=self.ax
         xdata = fitter.CurveData.getSplitData2D()[0]
         ydata1 = self.exp(xdata, *fitter.params[0:2], 0)
         ydata2 = self.exp(xdata, *fitter.params[3:5], 0)
@@ -469,37 +478,37 @@ class LifetimePlot(Plot):
                 tp1 = textPos
         # fit1
 
-        self.ax.errorbar(
+        sax.errorbar(
             xdata,
             ydata4,
-            c=self.fitColors[n + 1],
-            ls=self.fitLs,
+            c=fitter.fitColors[n + 1],
+            ls=fitter.fitLs,
             label="Offset",
-            alpha=self.fitAlpha,
+            alpha=fitter.fitAlpha,
         )
-        self.ax.errorbar(
+        ax.errorbar(
             xdata,
             ydata1,
-            c=self.fitColors[n + 2],
-            ls=self.fitLs,
+            c=fitter.fitColors[n + 2],
+            ls=fitter.fitLs,
             label="Partial mono-exponential fit",
-            alpha=self.fitAlpha,
+            alpha=fitter.fitAlpha,
         )
-        self.ax.errorbar(
+        ax.errorbar(
             xdata,
             ydata2,
-            c=self.fitColors[n + 3],
-            ls=self.fitLs,
+            c=fitter.fitColors[n + 3],
+            ls=fitter.fitLs,
             label="Partial mono-exponential fit",
-            alpha=self.fitAlpha,
+            alpha=fitter.fitAlpha,
         )
-        self.ax.errorbar(
+        ax.errorbar(
             xdata,
             ydata3,
-            c=self.fitColors[n + 4],
-            ls=self.fitLs,
+            c=fitter.fitColors[n + 4],
+            ls=fitter.fitLs,
             label="Partial mono-exponential fit",
-            alpha=self.fitAlpha,
+            alpha=fitter.fitAlpha,
         )
         sume = (fitter.params[1]+fitter.params[4]+fitter.params[6])
         self.handleDesc(fitter, n=n + 2, xsy=(0, np.amax(ydata1)), tp=tp1, sume=sume)
@@ -553,14 +562,21 @@ class LifetimePlot(Plot):
             self.dataList = dataList
         return self.dataList
 
-    def handleDesc(self, fitter, n=2, param_pos=0, xsy=None, tp=None, sume=None):
-        ax = self.ax
-        if fitter.params[0] <= 1.5 or self.time_domain == "p":
+    def handleDesc(self, fitter, n=2, param_pos=0, xsy=None, tp=None, sume=None, ax=None, 
+                   time_domain=default_time_domain, 
+                   fse=fse_default,
+                   sze=None,
+                  ):
+        if ax is None:
+            ax = self.ax
+        else:
+            ax = ax
+        if fitter.params[0] <= 1.5 or time_domain == "p":
             timedomain = "p"
             lifetime = fitter.params[param_pos] * 1000
         else:
             lifetime = fitter.params[param_pos]
-            timedomain = self.time_domain
+            timedomain = time_domain
         # if self.xCol!=4:
         # se=fitter.desc.format(np.round(fitter.params[self.xParamPos]))
         # else:
@@ -574,18 +590,18 @@ class LifetimePlot(Plot):
                 timedomain,
             )
         except:
-            se = self.fse.format(
+            se = fse.format(
                 n-1,
                 np.round(fitter.params[param_pos + 1] * 100 /sume, decimals=0),
                 n-1,
                 np.round(lifetime, decimals=0),
                 timedomain,
             )
-
-        sze = self.customFontsize[2]
+        if fontsize is None:
+            sze = self.default_font_size
         if xsy is None:
             xsy = (
-                fitter.params[self.xParamPos],
+                fitter.params[param_Pos],
                 np.amax(fitter.CurveData.getSplitData2D()[1])
                 - 0.1 * np.amax(fitter.CurveData.getSplitData2D()[1]),
             )
@@ -594,8 +610,8 @@ class LifetimePlot(Plot):
         arprps = dict(
             arrowstyle="<-",
             connectionstyle="arc3",
-            facecolor=self.fitColors[n],
-            edgecolor=self.fitColors[n],
+            facecolor=fitter.fitColors[n],
+            edgecolor=fitter.fitColors[n],
             linewidth=mpl.rcParams["lines.linewidth"],
         )
         ax.annotate(text=se, size=sze, xy=xsy, xytext=tp, arrowprops=arprps)
