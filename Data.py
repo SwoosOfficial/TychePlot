@@ -78,8 +78,8 @@ class Data:
         return data
     
     
-    def offsetData(self, offset):
-        xdata, ydata = self.getSplitData2D()
+    def offsetData(self, offset, xCol=0, yCol=0):
+        xdata, ydata = self.getSplitData2D(xCol=yCol, yCol=yCol)
         xdata = xdata+offset[0]
         ydata = ydata+offset[1]
         self.setData(Data.mergeData2D(xdata, ydata))

@@ -48,7 +48,10 @@ class SpectraPlot(Plot):
     energy = 4
     spectralRadiance_energy = 5
     intensity_energype = 7
-
+    
+    default_fstring="Emission at \n{:4.1f} nm / {:3.2f} eV"
+    default_fwhm_string="Peak: {:3.0f}\\,nm / {:3.2f}\\,eV\nFWHM: {:3.0f}\\,nm / {:3.0f}\\,"
+    
     spectral_data_format_default = {
         "separator": "\t",
         "skiplines": 40,
@@ -414,25 +417,36 @@ class SpectraPlot(Plot):
                             data.processData(self.normalize, yCol=6, value=value, col=6)
         return self.dataList
 
-    def process_annotation(
-        self,
-        param_pos,
-        tp,
-        n,
-        data,
-        fitter,
+    def handleDesc(
+        self, 
+        fitter, 
+        n=2, 
+        param_pos=0, 
+        xsy=None, 
+        tp=None, 
+        ax=None,
+        sze=None,
         yoffset_fac=0.1,
-        fstring="Emission at \n{:4.1f} nm / {:3.2f} eV",
-        fwhm_string="Peak: {:3.0f}\\,nm / {:3.2f}\\,eV\nFWHM: {:3.0f}\\,nm / {:3.0f}\\,",
+        fstring=default_fstring,
+        fwhm_string=default_fwhm_string,
+        FWHMParamPos=2,
+        showFWHM=False,
         override_xpos=None,
+        override_curve_data=None,
     ):
+        if ax is None:
+            ax= self.ax
         if override_xpos is not None:
             peak = override_xpos
-            FWHMval = fitter.params[self.FWHMParamPos]
+            FWHMval = fitter.params[FWHMParamPos]
         else:
-            peak = fitter.params[self.xParamPos + param_pos]
-            FWHMval = abs(fitter.params[self.FWHMParamPos + param_pos])
-        if self.showFWHM:
+            peak = fitter.params[param_pos]
+            FWHMval = abs(fitter.params[FWHMParamPos + param_pos])
+        if override_curve_data is not None:
+            ann_y = override_curve_data
+        else:
+            ann_y = fitter.CurveData
+        if showFWHM:
             FWHM = self.sigma_to_FWHM * FWHMval
             if FWHM < 1:
                 fstring = fwhm_string + "meV"
@@ -451,21 +465,50 @@ class SpectraPlot(Plot):
             se = fstring.format(
                 np.round(self.convFac / peak, decimals=1), np.round(peak, decimals=2)
             )
-        return self.ax.annotate(
+        if xsy is None:
+            xsy = (
+                peak,
+                np.amax(ann_y.getSplitData2D()[1])
+                - yoffset_fac * np.amax(ann_y.getSplitData2D()[1]),
+            )
+        if sze is None:
+            sze = self.default_font_size[2]
+        if tp is None:
+            tp = fitter.textPos
+        return ax.annotate(
             text=se,
-            size=self.customFontsize[2],
-            xy=(peak, np.amax(data) - yoffset_fac * np.amax(data)),
+            size=sze,
+            xy=xsy,
             xytext=tp,
             arrowprops=dict(
                 arrowstyle="<-",
                 connectionstyle="arc3",
-                facecolor=self.fitColors[-n-1],
-                edgecolor=self.fitColors[-n-1],
+                facecolor=fitter.fitColors[-n-1],
+                edgecolor=fitter.fitColors[-n-1],
                 linewidth=mpl.rcParams["lines.linewidth"],
             ),
         )
+    def plot_gauss(self, fitter, n, ax=None):
+        if ax is None:
+            ax=self.ax
+        xdata = fitter.CurveData.getSplitData2D()[0]
+        ydata = self.gauss(xdata, *fitter.params[0:3])
+        textPos = fitter.textPos
+        amp = fitter.params[1] / (np.sqrt(2 * np.pi * fitter.params[2] ** 2))
+        self.handleDesc(fitter, n, tp=textPos, ax=ax)
+        return [ax.errorbar(
+            xdata,
+            ydata1,
+            c=fitter.fitColors[-n-1],
+            ls=fitter.fitLs,
+            label="Gaussian fit",
+            alpha=fitter.fitAlpha,
+        )]
 
-    def plotDoubleGauss(self, fitter, n):
+        
+    def plot_doubleGauss(self, fitter, n, ax=None):
+        if ax is None:
+            ax=self.ax
         xdata = fitter.CurveData.getSplitData2D()[0]
         ydata1 = self.gauss(xdata, *fitter.params[0:3])
         ydata2 = self.gauss(xdata, *fitter.params[3:6])
@@ -479,26 +522,31 @@ class SpectraPlot(Plot):
         else:
             tp1 = textPos
             tp2 = textPos2
-        self.ax.errorbar(
-            xdata,
-            ydata1,
-            c=self.fitColors[-n-1],
-            ls=self.fitLs,
-            label="Partial mono-Gaussian fit",
-            alpha=self.fitAlpha,
-        )
-        self.process_annotation(0, tp1, n, ydata1, fitter)
-        self.ax.errorbar(
-            xdata,
-            ydata2,
-            c=self.fitColors[-n-1],
-            ls=self.fitLs,
-            label="Partial mono-Gaussian fit",
-            alpha=self.fitAlpha,
-        )
-        self.process_annotation(3, tp2, n, ydata2, fitter)
+        lines=[
+            ax.errorbar(
+                xdata,
+                ydata1,
+                c=fitter.fitColors[-n-1],
+                ls=fitter.fitLs,
+                label="Partial mono-Gaussian fit",
+                alpha=fitter.fitAlpha,
+            ),
+            ax.errorbar(
+                xdata,
+                ydata2,
+                c=fitter.fitColors[-n-1],
+                ls=fitter.fitLs,
+                label="Partial mono-Gaussian fit",
+                alpha=fitter.fitAlpha,
+            )
+        ]
+        self.handleDesc(fitter, n, tp=tp1, ax=ax)
+        self.handleDesc(fitter, n, param_pos=3, tp=tp2, ax=ax, override_curve_data=ydata2)
+        return lines
 
-    def plotTripleGauss(self, fitter, n):
+    def plot_tripleGauss(self, fitter, n, ax=None):
+        if ax is None:
+            ax=self.ax
         xdata = fitter.CurveData.getSplitData2D()[0]
         ydata1 = self.gauss(xdata, *fitter.params[0:3])
         ydata2 = self.gauss(xdata, *fitter.params[3:6])
@@ -537,35 +585,38 @@ class SpectraPlot(Plot):
                 tp2 = textPos2
                 tp1 = textPos
         # fit1
-        self.ax.errorbar(
-            xdata,
-            ydata1,
-            c=self.fitColors[-n-1],
-            ls=self.fitLs,
-            label="Partial mono-Gaussian fit",
-            alpha=self.fitAlpha,
-        )
-        self.process_annotation(0, tp1, n, ydata1, fitter)
-        # fit2
-        self.ax.errorbar(
-            xdata,
-            ydata2,
-            c=self.fitColors[-n-1],
-            ls=self.fitLs,
-            label="Partial mono-Gaussian fit",
-            alpha=self.fitAlpha,
-        )
-        self.process_annotation(3, tp2, n, ydata2, fitter)
-        # fit3
-        self.ax.errorbar(
-            xdata,
-            ydata3,
-            c=self.fitColors[-n-1],
-            ls=self.fitLs,
-            label="Partial mono-Gaussian fit",
-            alpha=self.fitAlpha,
-        )
-        self.process_annotation(6, tp3, n, ydata3, fitter)
+        lines=[
+            self.ax.errorbar(
+                xdata,
+                ydata1,
+                c=fitter.fitColors[-n-1],
+                ls=fitter.fitLs,
+                label="Partial mono-Gaussian fit",
+                alpha=fitter.fitAlpha,
+            ),
+            # fit2
+            self.ax.errorbar(
+                xdata,
+                ydata2,
+                c=fitter.fitColors[-n-1],
+                ls=fitter.fitLs,
+                label="Partial mono-Gaussian fit",
+                alpha=fitter.fitAlpha,
+            ),
+            # fit3
+            self.ax.errorbar(
+                xdata,
+                ydata3,
+                c=fitter.fitColors[-n-1],
+                ls=fitter.fitLs,
+                label="Partial mono-Gaussian fit",
+                alpha=fitter.fitAlpha,
+            ),
+        ]
+        self.handleDesc(fitter, n, tp=tp1, ax=ax)
+        self.handleDesc(fitter, n, param_pos=3, tp=tp2, ax=ax, override_curve_data=ydata2)
+        self.handleDesc(fitter, n, param_pos=6, tp=tp3, ax=ax, override_curve_data=ydata3)
+        return lines
 
     def plotNFrankCGauss(self, fitter, n, amp_thresh=0.1):
         xdata = fitter.CurveData.getSplitData2D()[0]

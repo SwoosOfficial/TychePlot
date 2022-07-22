@@ -27,15 +27,29 @@ class Fitter:
             "#bcbd22",
             "#17becf",
             "#f8e520",
-        ],
+        ]
     
     @classmethod
     def return_completed_fitter(cls, 
-                                data, 
-                                function,
+                                data,
+                                fTuple,
                                 noFit=False,
-                                **kwargs):
-        fitter=Fitter(data,function,**kwargs)
+                                **kwargs
+                                ):
+                    
+        fitter=Fitter(
+                    data,
+                    fTuple[2],
+                    errorData=None,
+                    dataForFitXLim=fTuple[0],
+                    dataForFitYLim=fTuple[6].pop("dataForFitYLim", None),
+                    curveDataXLim=fTuple[1],
+                    params=fTuple[3],
+                    textPos=fTuple[4],
+                    desc=fTuple[5],
+                    addKwArgs=fTuple[6],
+                    **kwargs
+        )
         if isinstance(fitter.dataForFitXLim[0], list):
             feature = [11, 2]
         else:
@@ -47,7 +61,7 @@ class Fitter:
         fitter.limitData(xLim=fitter.dataForFitXLim, yLim=fitter.dataForFitYLim, feature=feature[0])
         if not noFit:
             try:
-                fitter.fit(xCol=fitter.xCol, yCol=fitter.showCol, p0=fitter.params)
+                fitter.fit(xCol=fitter.xCol, yCol=fitter.yCol, p0=fitter.params)
             except RuntimeError as err:
                 raise cls.FitException(
                     fitter.function,
@@ -55,7 +69,7 @@ class Fitter:
                     err,
                     fitter.params,
                 )
-        fitter.doFitCurveData(xCol=fitter.xCol)
+        fitter.doFitCurveData(xCol=fitter.data.xCol)
         fitter.limitData(xLim=fitter.curveDataXLim, feature=feature[1])
         return fitter
     
@@ -70,6 +84,8 @@ class Fitter:
                  curveDataYLim=None,
                  textPos=None,
                  desc=None,
+                 xCol=0,
+                 yCol=0,
                  fitColors=default_fitColors,
                  fitAlpha=0.75,
                  fitLs=":",
@@ -89,6 +105,8 @@ class Fitter:
         self.curveDataYLim=curveDataYLim
         self.textPos=textPos
         self.desc=desc
+        self.xCol=xCol
+        self.yCol=yCol
         self.fitColors=fitColors
         self.fitAlpha=fitAlpha
         self.fitLs=fitLs
